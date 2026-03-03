@@ -1,9 +1,8 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { motion } from "framer-motion";
 
 const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December'
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
 ];
 
 interface MonthPickerProps {
@@ -23,29 +22,22 @@ export function MonthPicker({ year, month, onChange }: MonthPickerProps) {
   };
 
   return (
-    <div className="flex items-center gap-2">
-      <motion.button
-        whileTap={{ scale: 0.85 }}
+    <div className="flex items-center gap-1">
+      <button
         onClick={prev}
-        className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
+        className="p-1.5 rounded-lg hover:bg-accent transition-colors"
       >
-        <ChevronLeft className="w-4 h-4 text-foreground" />
-      </motion.button>
-      <motion.span
-        key={`${year}-${month}`}
-        initial={{ opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="font-display font-semibold text-foreground min-w-[160px] text-center"
-      >
+        <ChevronLeft className="w-3.5 h-3.5 text-muted-foreground" />
+      </button>
+      <span className="text-sm font-medium text-foreground min-w-[100px] text-center tabular-nums">
         {MONTHS[month]} {year}
-      </motion.span>
-      <motion.button
-        whileTap={{ scale: 0.85 }}
+      </span>
+      <button
         onClick={next}
-        className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
+        className="p-1.5 rounded-lg hover:bg-accent transition-colors"
       >
-        <ChevronRight className="w-4 h-4 text-foreground" />
-      </motion.button>
+        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+      </button>
     </div>
   );
 }
