@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthWrapper } from "./components/AuthWrapper";
+import { SplashWrapper } from "./components/SplashWrapper";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
@@ -14,13 +15,15 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<AuthWrapper><Index /></AuthWrapper>} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <SplashWrapper>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<AuthWrapper><Index /></AuthWrapper>} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </SplashWrapper>
     </TooltipProvider>
   </QueryClientProvider>
 );

@@ -48,9 +48,7 @@ export function AuthWrapper({ children }: { children: ReactNode }) {
           className="relative z-10 w-full max-w-sm"
         >
           <div className="glass-card p-10 flex flex-col items-center border border-border/50 shadow-2xl">
-            <div className="w-16 h-16 rounded-2xl bg-foreground/10 border border-border/60 flex items-center justify-center mb-6">
-              <Orbit className="w-8 h-8 text-foreground" strokeWidth={2.5} />
-            </div>
+            <img src="/dott.jpg" alt="Dott Logo" className="w-16 h-16 rounded-2xl object-cover mb-6 shadow-sm" />
             
             <h1 className="text-2xl font-bold text-foreground mb-2 text-center tracking-tight">Welcome to Dott</h1>
             <p className="text-muted-foreground text-center mb-8 text-sm leading-relaxed">

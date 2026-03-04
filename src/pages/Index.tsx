@@ -106,9 +106,7 @@ const Index = () => {
       >
         <div className="max-w-[1600px] mx-auto px-3 sm:px-6 py-3 sm:py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-foreground/10 border border-border/60 flex items-center justify-center">
-              <Orbit className="w-4 h-4 text-foreground" strokeWidth={2.5} />
-            </div>
+            <img src="/dott.jpg" alt="Dott Logo" className="w-7 h-7 rounded-lg object-cover" />
             <div>
               <h1 className="font-semibold text-sm text-foreground tracking-tight">Dott</h1>
             </div>
