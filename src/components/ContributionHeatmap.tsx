@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Habit, formatDateKey, getEntry } from "@/lib/habitStore";
 
@@ -69,12 +69,21 @@ export function ContributionHeatmap({ habits }: ContributionHeatmapProps) {
 
   if (habits.length === 0) return null;
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollLeft = scrollRef.current.scrollWidth;
+    }
+  }, [habits]);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3, duration: 0.4 }}
       className="glass-card overflow-x-auto scrollbar-thin p-5"
+      ref={scrollRef}
     >
       <div className="flex items-center justify-between mb-8 min-w-[700px]">
         <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Activity Landscape</h3>

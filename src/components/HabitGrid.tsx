@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Trash2, Flame, TrendingUp, Check, Edit2 } from "lucide-react";
 import {
@@ -89,14 +89,134 @@ export function HabitGrid({ year, month, habits, onUpdate }: HabitGridProps) {
     ? days.find(d => formatDateKey(d) === selectedCell.dateKey)
     : null;
 
+  // Get current week dates (Sun-Sat) for mobile view
+  const weekDays = useMemo(() => {
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay());
+    const result: Date[] = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(startOfWeek);
+      d.setDate(startOfWeek.getDate() + i);
+      result.push(d);
+    }
+    return result;
+  }, [todayKey]);
+
   return (
     <>
-      <div className={`glass-card overflow-hidden ${habits.length === 0 ? 'min-h-[350px]' : ''}`}>
+      {/* ===== MOBILE CARD VIEW (< 640px) ===== */}
+      <div className="sm:hidden space-y-3">
+        {habits.map((habit, idx) => {
+          const streak = getStreak(habit);
+          const IconComponent = ICON_MAP[habit.icon as keyof typeof ICON_MAP] || ICON_MAP.target;
+          return (
+            <motion.div
+              key={habit.id}
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.03, duration: 0.2 }}
+              className="glass-card p-4"
+            >
+              {/* Task header */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  <IconComponent className="w-5 h-5 shrink-0 text-muted-foreground" />
+                  <span className="text-sm font-medium text-foreground truncate">{habit.name}</span>
+                  {streak > 0 && (
+                    <span className="flex items-center gap-1 text-[11px] font-mono text-streak shrink-0">
+                      <Flame className="w-3 h-3" />{streak}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={() => setEditingHabit({ id: habit.id, name: habit.name })}
+                    className="p-1.5 rounded-lg hover:bg-accent transition-all"
+                  >
+                    <Edit2 className="w-3.5 h-3.5 text-muted-foreground" />
+                  </button>
+                  <button
+                    onClick={() => setDeleteTarget(habit)}
+                    className="p-1.5 rounded-lg hover:bg-destructive/10 transition-all"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Inline edit */}
+              {editingHabit?.id === habit.id && (
+                <div className="mb-3">
+                  <input
+                    value={editingHabit.name}
+                    onChange={(e) => setEditingHabit({ ...editingHabit, name: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') saveEditHabit();
+                      if (e.key === 'Escape') setEditingHabit(null);
+                    }}
+                    onBlur={saveEditHabit}
+                    autoFocus
+                    className="w-full px-3 py-2 text-sm bg-background border border-border/60 rounded-lg focus:outline-none focus:ring-1 focus:ring-ring/50"
+                  />
+                </div>
+              )}
+
+              {/* Week circles */}
+              <div className="flex items-center justify-between gap-1">
+                {weekDays.map(d => {
+                  const dateKey = formatDateKey(d);
+                  const entry = getEntry(habit, dateKey);
+                  const future = isFuture(d);
+                  const todayD = isToday(d);
+                  const dayName = DAYS[d.getDay()];
+                  const dayNum = d.getDate();
+
+                  return (
+                    <button
+                      key={dateKey}
+                      onClick={() => !future && handleCellClick(habit.id, dateKey)}
+                      disabled={future}
+                      className="flex flex-col items-center gap-1 flex-1"
+                    >
+                      <span className={`text-[10px] font-mono ${todayD ? 'text-foreground font-semibold' : 'text-muted-foreground'}`}>
+                        {dayName}
+                      </span>
+                      <div className={`w-9 h-9 flex items-center justify-center rounded-full border-2 transition-all ${
+                        future
+                          ? 'border-border/30 opacity-30'
+                          : entry.completed
+                            ? 'bg-foreground text-background border-foreground'
+                            : 'border-border/60 hover:border-foreground/40'
+                      } ${todayD && !entry.completed ? 'ring-2 ring-foreground/20 ring-offset-1 ring-offset-background' : ''}`}>
+                        {entry.completed && <Check className="w-4 h-4" strokeWidth={3} />}
+                        {!entry.completed && !future && (
+                          <span className={`text-[11px] font-mono ${todayD ? 'text-foreground' : 'text-muted-foreground'}`}>{dayNum}</span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          );
+        })}
+
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="w-full py-3.5 flex items-center justify-center gap-1.5 text-sm text-muted-foreground hover:text-foreground glass-card hover:bg-accent/50 transition-colors"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Add Task
+        </button>
+      </div>
+
+      {/* ===== DESKTOP TABLE VIEW (>= 640px) ===== */}
+      <div className={`hidden sm:block glass-card overflow-hidden ${habits.length === 0 ? 'min-h-[350px]' : ''}`}>
         <div className="overflow-x-auto scrollbar-thin">
           <table className="w-full border-collapse min-w-max">
             <thead>
               <tr>
-                <th className="sticky left-0 z-20 bg-card/90 backdrop-blur-sm p-0 w-[90px] sm:w-[130px] min-w-[90px] sm:min-w-[130px] max-w-[90px] sm:max-w-[130px]">
+                <th className="sticky left-0 z-20 bg-card/90 backdrop-blur-sm p-0 w-[130px] min-w-[130px] max-w-[130px]">
                   <div className="px-4 py-2.5 text-left grid-header border-b border-r border-border/60">
                     Task
                   </div>
@@ -105,7 +225,7 @@ export function HabitGrid({ year, month, habits, onUpdate }: HabitGridProps) {
                   const dayNum = d.getDate();
                   const dayName = DAYS[d.getDay()];
                   return (
-                    <th key={dayNum} className="p-0 min-w-[32px] sm:min-w-[40px]">
+                    <th key={dayNum} className="p-0 min-w-[40px]">
                       <div
                         className={`px-0.5 py-2.5 text-center border-b border-border/60 ${
                           isToday(d) ? 'bg-foreground/5' : ''
@@ -194,7 +314,7 @@ export function HabitGrid({ year, month, habits, onUpdate }: HabitGridProps) {
                             <button
                               onClick={() => !future && handleCellClick(habit.id, dateKey)}
                               disabled={future}
-                              className={`w-7 h-7 sm:w-6 sm:h-6 mx-auto flex items-center justify-center rounded-[8px] border transition-all ${
+                              className={`w-6 h-6 mx-auto flex items-center justify-center rounded-[8px] border transition-all ${
                                 future
                                   ? 'cell-disabled'
                                   : entry.completed
