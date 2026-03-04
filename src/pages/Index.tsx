@@ -128,26 +128,40 @@ const Index = () => {
         {/* Header Row: Tabs + MonthPicker */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
           {/* Tabs */}
-          <div className="flex bg-card/50 p-1 rounded-xl border border-border/60 w-full sm:w-max">
+          <div className="flex bg-card/50 p-1 rounded-xl border border-border/60 w-full sm:w-max relative">
             <button
               onClick={() => setSearchParams({ tab: 'tasks' })}
-              className={`flex-1 sm:flex-none flex justify-center sm:justify-start items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              className={`relative z-10 flex-1 sm:flex-none flex justify-center sm:justify-start items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'tasks' 
-                  ? 'bg-foreground text-background shadow-sm' 
+                  ? 'text-background' 
                   : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
               }`}
             >
+              {activeTab === 'tasks' && (
+                <motion.div
+                  layoutId="main-tab-indicator"
+                  className="absolute inset-0 bg-foreground rounded-lg shadow-sm -z-10"
+                  transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                />
+              )}
               <LayoutList className="w-4 h-4" />
               Tasks
             </button>
             <button
               onClick={() => setSearchParams({ tab: 'notes' })}
-              className={`flex-1 sm:flex-none flex justify-center sm:justify-start items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              className={`relative z-10 flex-1 sm:flex-none flex justify-center sm:justify-start items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'notes' 
-                  ? 'bg-foreground text-background shadow-sm' 
+                  ? 'text-background' 
                   : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
               }`}
             >
+              {activeTab === 'notes' && (
+                <motion.div
+                  layoutId="main-tab-indicator"
+                  className="absolute inset-0 bg-foreground rounded-lg shadow-sm -z-10"
+                  transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                />
+              )}
               <FileText className="w-4 h-4" />
               Notes
             </button>

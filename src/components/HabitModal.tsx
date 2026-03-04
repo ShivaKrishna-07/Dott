@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Plus, Trash2, ListChecks, Check, Edit2 } from "lucide-react";
 import { Habit, HabitEntry, getEntry, SubHabit } from "@/lib/habitStore";
 import { ICON_MAP } from "@/lib/icons";
+import { DeleteConfirmModal } from "./DeleteConfirmModal";
 
 interface HabitModalProps {
   habit: Habit;
@@ -43,6 +44,8 @@ function addChildNode(nodes: SubHabit[], parentId: string, newNode: SubHabit): S
 
 export function HabitModal({ habit, dateKey, dateLabel, isPast, onClose, onSave }: HabitModalProps) {
   const existing = getEntry(habit, dateKey);
+  const isCompleted = habit.target !== undefined ? ((existing.value || 0) >= habit.target) : existing.completed;
+  const [value, setValue] = useState<string>(existing.value?.toString() || '');
   const [notes, setNotes] = useState(existing.notes);
   const [subHabits, setSubHabits] = useState<SubHabit[]>(existing.subHabits);
   const [newSubHabit, setNewSubHabit] = useState('');
@@ -92,10 +95,19 @@ export function HabitModal({ habit, dateKey, dateLabel, isPast, onClose, onSave 
     setSubHabits(addChildNode(subHabits, parentId, newNode));
   };
 
-  const handleSave = (completed: boolean) => {
+  const handleSave = (completedToggle?: boolean) => {
+    let finalCompleted = completedToggle ?? false;
+    let numericValue = undefined;
+
+    if (habit.target !== undefined) {
+      numericValue = value ? parseFloat(value) : 0;
+      finalCompleted = numericValue >= habit.target;
+    }
+
     onSave({
       date: dateKey,
-      completed,
+      completed: finalCompleted,
+      value: numericValue,
       notes,
       subHabits,
     });
@@ -139,13 +151,13 @@ export function HabitModal({ habit, dateKey, dateLabel, isPast, onClose, onSave 
                 <X className="w-4 h-4 text-muted-foreground" />
               </button>
             </div>
-            {existing.completed && (
+            {isCompleted && (
               <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-success/10 border border-success/20">
                 <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
                 <span className="text-[11px] font-medium text-success">Completed</span>
               </div>
             )}
-            {isPast && !existing.completed && (
+            {isPast && !isCompleted && (
               <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted border border-border">
                 <span className="text-[11px] font-medium text-muted-foreground">Incomplete (Past)</span>
               </div>
@@ -154,6 +166,33 @@ export function HabitModal({ habit, dateKey, dateLabel, isPast, onClose, onSave 
 
           {/* Body */}
           <div className="px-6 py-5 space-y-5 overflow-y-auto scrollbar-thin flex-1">
+            {/* Target Value */}
+            {habit.target !== undefined && (
+              <div>
+                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5 mb-2.5 uppercase tracking-wider">
+                  Progress ({habit.unit || 'target'})
+                </label>
+                {isPast ? (
+                  <div className="w-full px-3.5 py-3 rounded-xl bg-accent/30 border border-border/40 text-foreground text-sm font-medium">
+                    {value || 0} / {habit.target}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      value={value}
+                      onChange={e => setValue(e.target.value)}
+                      placeholder={`Target: ${habit.target}`}
+                      min="0"
+                      step="0.1"
+                      className="flex-1 px-3.5 py-2.5 rounded-xl bg-background border border-border/60 text-foreground text-sm font-medium focus:outline-none focus:ring-2 focus:ring-ring/20"
+                    />
+                    <span className="text-sm font-medium text-muted-foreground shrink-0">/ {habit.target}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Sub-habits */}
             <div>
               <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5 mb-2.5 uppercase tracking-wider">
@@ -222,7 +261,14 @@ export function HabitModal({ habit, dateKey, dateLabel, isPast, onClose, onSave 
           {/* Footer */}
           {!isPast && (
             <div className="px-6 py-4 border-t border-border/60">
-              {existing.completed ? (
+              {habit.target !== undefined ? (
+                <button
+                  onClick={() => handleSave()}
+                  className="w-full py-2.5 rounded-xl bg-foreground text-background font-medium text-sm hover:opacity-90 transition-opacity"
+                >
+                  Save Progress
+                </button>
+              ) : isCompleted ? (
                 <button
                   onClick={() => handleSave(false)}
                   className="w-full py-2.5 rounded-xl border border-destructive/20 text-destructive font-medium text-sm hover:bg-destructive/10 transition-colors"
@@ -266,6 +312,7 @@ function SubTaskNode({
 }: SubTaskNodeProps) {
   const [newChildName, setNewChildName] = useState('');
   const [isAddingChild, setIsAddingChild] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<SubHabit | null>(null);
 
   const handleAddChild = () => {
     addChildSubHabit(node.id, newChildName);
@@ -352,7 +399,7 @@ function SubTaskNode({
               <Edit2 className="w-3.5 h-3.5" />
             </button>
             <button
-              onClick={() => removeSubHabit(node.id)}
+              onClick={() => setDeleteTarget(node)}
               className="p-1.5 rounded-lg hover:bg-destructive/10 transition-all text-muted-foreground hover:text-destructive"
               title="Delete Sub-task"
             >
@@ -407,6 +454,20 @@ function SubTaskNode({
           </button>
         </div>
       )}
+
+      {/* Delete Confirmation Modal for Sub-tasks */}
+      <AnimatePresence>
+        {deleteTarget && (
+          <DeleteConfirmModal
+            habitName={deleteTarget.name}
+            onConfirm={() => {
+              removeSubHabit(deleteTarget.id);
+              setDeleteTarget(null);
+            }}
+            onCancel={() => setDeleteTarget(null)}
+          />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

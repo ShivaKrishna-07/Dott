@@ -58,8 +58,8 @@ export function HabitGrid({ year, month, habits, onUpdate }: HabitGridProps) {
   const isPast = (d: Date) => formatDateKey(d) < yesterdayKey;
   const isFuture = (d: Date) => formatDateKey(d) > todayKey;
 
-  const addHabit = (name: string, icon: string, defaultSubHabits?: SubHabit[]) => {
-    const newHabit = createHabit(name, icon, defaultSubHabits);
+  const addHabit = (name: string, icon: string, defaultSubHabits?: SubHabit[], target?: number, unit?: string) => {
+    const newHabit = createHabit(name, icon, defaultSubHabits, target, unit);
     onUpdate([...habits, newHabit]);
     toast.success(`${name} added!`);
   };
@@ -172,7 +172,7 @@ export function HabitGrid({ year, month, habits, onUpdate }: HabitGridProps) {
 
               {/* Month circles (Scrollable) */}
               <div className="flex items-center gap-3 overflow-x-auto scrollbar-none pb-1 -mx-2 px-2 snap-x snap-mandatory">
-                {days.map(d => {
+               {days.map(d => {
                   const dateKey = formatDateKey(d);
                   const entry = getEntry(habit, dateKey);
                   const future = isFuture(d);
@@ -180,9 +180,14 @@ export function HabitGrid({ year, month, habits, onUpdate }: HabitGridProps) {
                   const dayName = DAYS[d.getDay()];
                   const dayNum = d.getDate();
 
+                  const isCompleted = habit.target !== undefined ? ((entry.value || 0) >= habit.target) : entry.completed;
+                  const showTooltip = habit.target !== undefined && !isCompleted && !future;
+                  const tooltipText = showTooltip ? `${entry.value || 0} / ${habit.target} ${habit.unit || ''}`.trim() : '';
+
                   return (
                     <button
                       key={dateKey}
+                      title={tooltipText}
                       onClick={() => !future && handleCellClick(habit.id, dateKey)}
                       disabled={future}
                       className="flex flex-col items-center gap-1 shrink-0 snap-center"
@@ -194,12 +199,12 @@ export function HabitGrid({ year, month, habits, onUpdate }: HabitGridProps) {
                       <div className={`w-9 h-9 flex items-center justify-center rounded-full border-2 transition-all ${
                         future
                           ? 'border-border/30 opacity-30'
-                          : entry.completed
+                          : isCompleted
                             ? 'bg-foreground text-background border-foreground'
                             : 'border-border/60 hover:border-foreground/40'
-                      } ${todayD && !entry.completed ? 'ring-2 ring-foreground/20 ring-offset-1 ring-offset-background' : ''}`}>
-                        {entry.completed && <Check className="w-4 h-4" strokeWidth={3} />}
-                        {!entry.completed && !future && (
+                      } ${todayD && !isCompleted ? 'ring-2 ring-foreground/20 ring-offset-1 ring-offset-background' : ''}`}>
+                        {isCompleted && <Check className="w-4 h-4" strokeWidth={3} />}
+                        {!isCompleted && !future && (
                           <span className={`text-[11px] font-mono ${todayD ? 'text-foreground' : 'text-muted-foreground'}`}>{dayNum}</span>
                         )}
                       </div>
@@ -210,6 +215,23 @@ export function HabitGrid({ year, month, habits, onUpdate }: HabitGridProps) {
             </motion.div>
           );
         })}
+
+        {habits.length === 0 && (
+          <div className="flex flex-col items-center justify-center p-8 text-center glass-card border-dashed">
+            <div className="w-12 h-12 rounded-full bg-accent/50 flex items-center justify-center mb-3">
+              <Plus className="w-6 h-6 text-muted-foreground" />
+            </div>
+            <p className="text-sm font-medium text-foreground mb-1">No tasks yet</p>
+            <p className="text-xs text-muted-foreground mb-4">Start by adding a new habit tracking task.</p>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="px-4 py-2 flex items-center gap-2 text-xs font-medium bg-foreground text-background rounded-lg hover:bg-foreground/90 transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Add Task
+            </button>
+          </div>
+        )}
 
         <button
           onClick={() => setShowAddModal(true)}
@@ -225,9 +247,9 @@ export function HabitGrid({ year, month, habits, onUpdate }: HabitGridProps) {
         <div ref={tableContainerRef} className="overflow-x-auto scrollbar-thin min-h-[300px]">
           <table className="w-full border-collapse min-w-max border-spacing-0">
             <thead>
-              <tr>
-                <th className="sticky left-0 z-20 bg-card/90 backdrop-blur-sm p-0 w-[130px] min-w-[130px] max-w-[130px]">
-                  <div className="px-4 py-2.5 text-left grid-header border-b border-border/60">
+              <tr className="h-11">
+                <th className="sticky left-0 z-20 bg-card/90 backdrop-blur-sm p-0 w-[130px] min-w-[130px] max-w-[130px] border-b border-border/60 h-full">
+                  <div className="px-4 flex items-center h-full text-left grid-header">
                     Task
                   </div>
                 </th>
@@ -235,28 +257,47 @@ export function HabitGrid({ year, month, habits, onUpdate }: HabitGridProps) {
                   const dayNum = d.getDate();
                   const dayName = DAYS[d.getDay()];
                   return (
-                    <th key={dayNum} className="p-0 min-w-[40px]">
+                    <th key={dayNum} className="p-0 min-w-[40px] border-b border-border/60 h-full">
                       <div
-                        className={`px-0.5 py-2.5 text-center border-b border-border/60 ${
+                        className={`px-0.5 flex flex-col justify-center items-center h-full ${
                           isToday(d) ? 'bg-foreground/5' : ''
                         }`}
                       >
-                        <div className="text-[10px] text-muted-foreground font-mono">{dayName}</div>
+                        <div className="text-[10px] text-muted-foreground font-mono leading-none">{dayName}</div>
                         <div className={`text-xs font-mono mt-0.5 ${isToday(d) ? 'text-foreground font-semibold' : 'text-muted-foreground'}`}>{dayNum}</div>
                       </div>
                     </th>
                   );
                 })}
-                <th className="sticky right-0 z-20 bg-card/90 backdrop-blur-sm p-0 min-w-[50px]">
-                  <div className="px-1.5 py-2.5 text-center border-b border-border/60 grid-header">
-                    <TrendingUp className="w-3 h-3 mx-auto text-muted-foreground" />
+                <th className="sticky right-0 z-20 bg-card/90 backdrop-blur-sm p-0 min-w-[50px] border-b border-border/60 h-full">
+                  <div className="px-1.5 flex items-center justify-center h-full grid-header">
+                    <TrendingUp className="w-3 h-3 text-muted-foreground" />
                   </div>
                 </th>
               </tr>
             </thead>
             <tbody>
               <AnimatePresence>
-                {habits.map((habit, idx) => {
+                {habits.length === 0 ? (
+                  <tr>
+                    <td colSpan={days.length + 2} className="p-0">
+                      <div className="flex flex-col items-center justify-center py-16 text-center border-b border-border/20">
+                        <div className="w-12 h-12 rounded-full bg-accent/50 flex items-center justify-center mb-3">
+                          <Plus className="w-6 h-6 text-muted-foreground" />
+                        </div>
+                        <p className="text-sm font-medium text-foreground mb-1">No tasks yet</p>
+                        <p className="text-xs text-muted-foreground mb-4">Start by adding a new tracking task.</p>
+                        <button
+                          onClick={() => setShowAddModal(true)}
+                          className="px-4 py-2 flex items-center gap-2 text-xs font-medium bg-foreground text-background rounded-lg hover:bg-foreground/90 transition-colors"
+                        >
+                          <Plus className="w-3 h-3" />
+                          Add Task
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ) : habits.map((habit, idx) => {
                   const streak = getStreak(habit);
                   const rate = getCompletionRate(habit, year, month);
                   return (
@@ -319,20 +360,25 @@ export function HabitGrid({ year, month, habits, onUpdate }: HabitGridProps) {
                         const future = isFuture(d);
                         const todayD = isToday(d);
 
+                        const isCompleted = habit.target !== undefined ? ((entry.value || 0) >= habit.target) : entry.completed;
+                        const showTooltip = habit.target !== undefined && !isCompleted && !future;
+                        const tooltipText = showTooltip ? `${entry.value || 0} / ${habit.target} ${habit.unit || ''}`.trim() : '';
+
                         return (
                           <td key={dateKey} className="p-0.5">
                             <button
+                              title={tooltipText}
                               onClick={() => !future && handleCellClick(habit.id, dateKey)}
                               disabled={future}
                               className={`w-6 h-6 mx-auto flex items-center justify-center rounded-[8px] border transition-all ${
                                 future
                                   ? 'cell-disabled'
-                                  : entry.completed
+                                  : isCompleted
                                     ? 'cell-checked border-foreground/50 shadow-sm shadow-foreground/20'
                                     : 'cell-unchecked border-border/80 hover:border-foreground/30'
-                              } ${todayD ? 'ring-2 ring-foreground/20 ring-offset-1 ring-offset-background' : ''}`}
+                              } ${todayD && !isCompleted ? 'ring-2 ring-foreground/20 ring-offset-1 ring-offset-background' : ''}`}
                             >
-                              {entry.completed && (
+                              {isCompleted && (
                                 <Check className="w-3.5 h-3.5" strokeWidth={3} />
                               )}
                             </button>

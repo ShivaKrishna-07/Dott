@@ -12,6 +12,7 @@ export interface SubHabit {
 export interface HabitEntry {
   date: string; // YYYY-MM-DD
   completed: boolean;
+  value?: number; // Target progress
   notes: string;
   mood?: number; // 1-5
   energyLevel?: number; // 1-5
@@ -24,6 +25,8 @@ export interface Habit {
   name: string;
   icon: string;
   color: string;
+  target?: number;
+  unit?: string;
   entries: Record<string, HabitEntry>;
   createdAt: string;
   defaultSubHabits?: SubHabit[];
@@ -72,12 +75,14 @@ export async function saveHabitsCloud(userId: string, habits: Habit[]): Promise<
   await setDoc(docRef, { habits }, { merge: true });
 }
 
-export function createHabit(name: string, icon: string, defaultSubHabits?: SubHabit[]): Habit {
+export function createHabit(name: string, icon: string, defaultSubHabits?: SubHabit[], target?: number, unit?: string): Habit {
   return {
     id: crypto.randomUUID(),
     name,
     icon,
     color: getRandomColor(),
+    target,
+    unit,
     entries: {},
     createdAt: new Date().toISOString(),
     defaultSubHabits
@@ -95,6 +100,7 @@ export function getEntry(habit: Habit, dateKey: string): HabitEntry {
   return {
     date: dateKey,
     completed: false,
+    value: 0,
     notes: '',
     mood: 0,
     energyLevel: 0,

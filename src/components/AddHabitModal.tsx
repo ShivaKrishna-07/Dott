@@ -3,6 +3,13 @@ import { motion } from "framer-motion";
 import { X, Sparkles, PenLine } from "lucide-react";
 import { ICON_MAP, IconName } from "@/lib/icons";
 import { SubHabit } from "@/lib/habitStore";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const ICONS: IconName[] = [
   'activity', 'book', 'brain', 'droplets', 'dumbbell',
@@ -11,39 +18,43 @@ const ICONS: IconName[] = [
   'utensils', 'smile', 'briefcase'
 ];
 
-const TEMPLATES: { name: string, icon: IconName, category: string, defaultSubHabits?: Omit<SubHabit, 'id'>[] }[] = [
+const TEMPLATES: { name: string, icon: IconName, category: string, defaultSubHabits?: Omit<SubHabit, 'id'>[], target?: number, unit?: string }[] = [
   { name: "Practice English", icon: "book", category: "Learning", defaultSubHabits: [{ name: "Minutes practiced", completed: false }] },
-  { name: "Morning Run", icon: "activity", category: "Fitness" },
-  { name: "Meditate", icon: "sprout", category: "Mindfulness" },
-  { name: "Read 30 min", icon: "book", category: "Learning" },
-  { name: "Drink Water", icon: "droplets", category: "Health" },
-  { name: "Journal", icon: "pen", category: "Mindfulness" },
+  { name: "Morning Run", icon: "activity", category: "Fitness", target: 3, unit: "km" },
+  { name: "Meditate", icon: "sprout", category: "Mindfulness", target: 10, unit: "minutes" },
+  { name: "Read 30 min", icon: "book", category: "Learning", target: 30, unit: "pages" },
+  { name: "Drink Water", icon: "droplets", category: "Health", target: 8, unit: "glasses" },
+  { name: "Journal", icon: "pen", category: "Mindfulness", target: 1, unit: "session" },
   { name: "No Sugar", icon: "target", category: "Health" },
-  { name: "Workout", icon: "dumbbell", category: "Fitness" },
-  { name: "Sleep 8h", icon: "moon", category: "Health" },
-  { name: "Practice Music", icon: "music", category: "Creative" },
-  { name: "Learn Language", icon: "brain", category: "Learning" },
+  { name: "Workout", icon: "dumbbell", category: "Fitness", target: 45, unit: "minutes" },
+  { name: "Sleep 8h", icon: "moon", category: "Health", target: 8, unit: "hours" },
+  { name: "Practice Music", icon: "music", category: "Creative", target: 30, unit: "minutes" },
+  { name: "Learn Language", icon: "brain", category: "Learning", target: 15, unit: "minutes" },
   { name: "Eat Healthy", icon: "utensils", category: "Health" },
   { name: "Save Money", icon: "wallet", category: "Finance" },
   { name: "Wake Up Early", icon: "sun", category: "Productivity" },
   { name: "Clean Room", icon: "zap", category: "Productivity" },
-  { name: "Draw / Paint", icon: "palette", category: "Creative" },
+  { name: "Draw / Paint", icon: "palette", category: "Creative", target: 1, unit: "session" },
   { name: "Take Vitamins", icon: "heart", category: "Health" },
 ];
 
 interface AddHabitModalProps {
   onClose: () => void;
-  onAdd: (name: string, icon: string, defaultSubHabits?: SubHabit[]) => void;
+  onAdd: (name: string, icon: string, defaultSubHabits?: SubHabit[], target?: number, unit?: string) => void;
 }
 
 export function AddHabitModal({ onClose, onAdd }: AddHabitModalProps) {
   const [name, setName] = useState('');
   const [icon, setIcon] = useState<IconName>('target');
   const [tab, setTab] = useState<'templates' | 'custom'>('templates');
+  const [target, setTarget] = useState('');
+  const [unit, setUnit] = useState('session');
+  const [isCustomUnit, setIsCustomUnit] = useState(false);
 
   const handleSubmit = () => {
     if (!name.trim()) return;
-    onAdd(name.trim(), icon);
+    const parsedTarget = target ? parseFloat(target) : undefined;
+    onAdd(name.trim(), icon, undefined, parsedTarget, parsedTarget ? unit.trim() || 'session' : undefined);
     onClose();
   };
 
@@ -52,7 +63,7 @@ export function AddHabitModal({ onClose, onAdd }: AddHabitModalProps) {
     if (template.defaultSubHabits) {
       subHabits = template.defaultSubHabits.map(sh => ({ ...sh, id: crypto.randomUUID() }));
     }
-    onAdd(template.name, template.icon, subHabits);
+    onAdd(template.name, template.icon, subHabits, template.target, template.unit);
     onClose();
   };
 
@@ -83,26 +94,40 @@ export function AddHabitModal({ onClose, onAdd }: AddHabitModalProps) {
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-1 p-1 bg-accent/50 rounded-xl">
+          <div className="flex gap-1 p-1 bg-accent/50 rounded-xl relative z-0">
             <button
               onClick={() => setTab('templates')}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all ${
+              className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-colors ${
                 tab === 'templates'
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
+                  ? 'text-background'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-background/10'
               }`}
             >
+              {tab === 'templates' && (
+                <motion.div
+                  layoutId="add-modal-tab-indicator"
+                  className="absolute inset-0 bg-foreground rounded-lg shadow-sm -z-10"
+                  transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                />
+              )}
               <Sparkles className="w-3.5 h-3.5" />
               Templates
             </button>
             <button
               onClick={() => setTab('custom')}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all ${
+              className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-colors ${
                 tab === 'custom'
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
+                  ? 'text-background'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-background/10'
               }`}
             >
+              {tab === 'custom' && (
+                <motion.div
+                  layoutId="add-modal-tab-indicator"
+                  className="absolute inset-0 bg-foreground rounded-lg shadow-sm -z-10"
+                  transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                />
+              )}
               <PenLine className="w-3.5 h-3.5" />
               Custom
             </button>
@@ -167,6 +192,60 @@ export function AddHabitModal({ onClose, onAdd }: AddHabitModalProps) {
                   autoFocus
                   className="w-full px-3.5 py-2.5 rounded-xl bg-background border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/20 placeholder:text-muted-foreground"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-2 block uppercase tracking-wider">Target</label>
+                  <input
+                    type="number"
+                    value={target}
+                    onChange={e => setTarget(e.target.value)}
+                    placeholder="e.g. 1"
+                    min="0"
+                    step="0.1"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-background border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/20 placeholder:text-muted-foreground"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-2 block uppercase tracking-wider">Unit</label>
+                  {!isCustomUnit ? (
+                    <Select
+                      value={unit}
+                      onValueChange={val => {
+                        if (val === 'custom') {
+                          setIsCustomUnit(true);
+                          setUnit('');
+                        } else {
+                          setUnit(val);
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-full px-3.5 py-2.5 h-[42px] rounded-xl bg-background border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/20">
+                        <SelectValue placeholder="Select unit" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl border border-border/50 shadow-md">
+                        <SelectItem value="session" className="rounded-lg">session</SelectItem>
+                        <SelectItem value="minutes" className="rounded-lg">minutes</SelectItem>
+                        <SelectItem value="hours" className="rounded-lg">hours</SelectItem>
+                        <SelectItem value="pages" className="rounded-lg">pages</SelectItem>
+                        <SelectItem value="glasses" className="rounded-lg">glasses</SelectItem>
+                        <SelectItem value="miles" className="rounded-lg">miles</SelectItem>
+                        <SelectItem value="km" className="rounded-lg">km</SelectItem>
+                        <SelectItem value="custom" className="rounded-lg font-medium text-primary">Custom...</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <input
+                      value={unit}
+                      onChange={e => setUnit(e.target.value)}
+                      placeholder="e.g. chapters"
+                      autoFocus
+                      onBlur={() => !unit.trim() && setIsCustomUnit(false)}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-background border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/20 placeholder:text-muted-foreground"
+                    />
+                  )}
+                </div>
               </div>
 
               <button

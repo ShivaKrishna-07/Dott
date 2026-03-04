@@ -9,7 +9,7 @@ interface ContributionHeatmapProps {
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export function ContributionHeatmap({ habits }: ContributionHeatmapProps) {
-  const { weeks, maxCompleted } = useMemo(() => {
+  const { weeks } = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -28,8 +28,10 @@ export function ContributionHeatmap({ habits }: ContributionHeatmapProps) {
     while (current <= end) {
       const key = formatDateKey(current);
       let completed = 0;
+      let total = 0;
       if (current <= today) {
         for (const habit of habits) {
+          total++;
           if (getEntry(habit, key).completed) completed++;
         }
       }
@@ -38,6 +40,7 @@ export function ContributionHeatmap({ habits }: ContributionHeatmapProps) {
         date: new Date(current),
         key,
         completed,
+        total,
         isFuture: current > today,
       });
       current.setDate(current.getDate() + 1);
@@ -54,13 +57,13 @@ export function ContributionHeatmap({ habits }: ContributionHeatmapProps) {
       }
     }
 
-    return { weeks, maxCompleted: max };
+    return { weeks };
   }, [habits]);
 
-  const getColorClass = (completed: number, max: number, isFuture: boolean) => {
+  const getColorClass = (completed: number, total: number, isFuture: boolean) => {
     if (isFuture) return "bg-accent/30";
-    if (completed === 0) return "bg-accent/50";
-    const ratio = completed / max;
+    if (total === 0 || completed === 0) return "bg-accent/50";
+    const ratio = completed / total;
     if (ratio <= 0.25) return "bg-emerald-950";
     if (ratio <= 0.5) return "bg-emerald-800";
     if (ratio <= 0.75) return "bg-emerald-600";
@@ -137,8 +140,8 @@ export function ContributionHeatmap({ habits }: ContributionHeatmapProps) {
                 {week.map(day => (
                   <div
                     key={day.key}
-                    title={`${day.date.toDateString()}: ${day.completed} tasks`}
-                    className={`w-[11px] h-[11px] rounded-[3px] ${getColorClass(day.completed, maxCompleted, day.isFuture)} transition-colors hover:ring-1 hover:ring-foreground/40`}
+                    title={`${day.date.toDateString()}: ${day.completed}/${day.total} tasks completed`}
+                    className={`w-[11px] h-[11px] rounded-[3px] ${getColorClass(day.completed, day.total, day.isFuture)} transition-colors hover:ring-1 hover:ring-foreground/40`}
                   />
                 ))}
               </div>
