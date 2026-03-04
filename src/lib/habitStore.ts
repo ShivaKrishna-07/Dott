@@ -2,25 +2,28 @@ export interface SubHabit {
   id: string;
   name: string;
   completed: boolean;
+  value?: string;
+  subHabits?: SubHabit[];
 }
 
 export interface HabitEntry {
   date: string; // YYYY-MM-DD
   completed: boolean;
   notes: string;
-  mood: number; // 1-5
-  energyLevel: number; // 1-5
-  timeSpent: number; // minutes
+  mood?: number; // 1-5
+  energyLevel?: number; // 1-5
+  timeSpent?: number; // minutes
   subHabits: SubHabit[];
 }
 
 export interface Habit {
   id: string;
   name: string;
-  emoji: string;
+  icon: string;
   color: string;
   entries: Record<string, HabitEntry>;
   createdAt: string;
+  defaultSubHabits?: SubHabit[];
 }
 
 const STORAGE_KEY = 'habit-tracker-data';
@@ -47,26 +50,34 @@ export function saveHabits(habits: Habit[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(habits));
 }
 
-export function createHabit(name: string, emoji: string): Habit {
+export function createHabit(name: string, icon: string, defaultSubHabits?: SubHabit[]): Habit {
   return {
     id: crypto.randomUUID(),
     name,
-    emoji,
+    icon,
     color: getRandomColor(),
     entries: {},
     createdAt: new Date().toISOString(),
+    defaultSubHabits
   };
 }
 
 export function getEntry(habit: Habit, dateKey: string): HabitEntry {
-  return habit.entries[dateKey] || {
+  if (habit.entries[dateKey]) {
+    return habit.entries[dateKey];
+  }
+
+  // Deep clone default sub-habits if they exist so modifications don't mutate the template
+  const clonedSubHabits = habit.defaultSubHabits ? JSON.parse(JSON.stringify(habit.defaultSubHabits)) : [];
+
+  return {
     date: dateKey,
     completed: false,
     notes: '',
     mood: 0,
     energyLevel: 0,
     timeSpent: 0,
-    subHabits: [],
+    subHabits: clonedSubHabits,
   };
 }
 
