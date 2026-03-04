@@ -1,3 +1,6 @@
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from './firebase';
+
 export interface SubHabit {
   id: string;
   name: string;
@@ -48,6 +51,25 @@ export function loadHabits(): Habit[] {
 
 export function saveHabits(habits: Habit[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(habits));
+}
+
+export async function loadHabitsCloud(userId: string): Promise<Habit[]> {
+  try {
+    const docRef = doc(db, 'users', userId);
+    const snap = await getDoc(docRef);
+    if (snap.exists() && snap.data().habits) {
+      return snap.data().habits;
+    }
+    return [];
+  } catch (err) {
+    console.error("Error loading habits from cloud:", err);
+    return [];
+  }
+}
+
+export async function saveHabitsCloud(userId: string, habits: Habit[]): Promise<void> {
+  const docRef = doc(db, 'users', userId);
+  await setDoc(docRef, { habits }, { merge: true });
 }
 
 export function createHabit(name: string, icon: string, defaultSubHabits?: SubHabit[]): Habit {

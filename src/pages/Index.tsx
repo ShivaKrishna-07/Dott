@@ -3,8 +3,12 @@ import { motion } from "framer-motion";
 import { MonthPicker } from "@/components/MonthPicker";
 import { HabitGrid } from "@/components/HabitGrid";
 import { ContributionHeatmap } from "@/components/ContributionHeatmap";
-import { Habit, loadHabits, saveHabits, formatDateKey, getEntry } from "@/lib/habitStore";
+import { Habit, loadHabits, loadHabitsCloud, saveHabitsCloud, formatDateKey, getEntry } from "@/lib/habitStore";
+import { auth } from "@/lib/firebase";
+import { useAuthState } from "react-firebase-hooks/auth";
+import { signOut } from "firebase/auth";
 import { toast } from "sonner";
+import { LogOut, Orbit } from "lucide-react";
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -15,18 +19,39 @@ function getGreeting(): string {
 }
 
 const Index = () => {
+  const [user] = useAuthState(auth);
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
   const [habits, setHabits] = useState<Habit[]>([]);
 
   useEffect(() => {
-    setHabits(loadHabits());
-  }, []);
+    if (!user) return;
+
+    const initializeData = async () => {
+      let cloudHabits = await loadHabitsCloud(user.uid);
+      const localHabits = loadHabits();
+
+      // Migrate local to cloud if cloud is empty and local has data
+      if (cloudHabits.length === 0 && localHabits.length > 0) {
+        toast.info("Syncing your local habits to the cloud...");
+        await saveHabitsCloud(user.uid, localHabits);
+        cloudHabits = localHabits;
+      }
+
+      setHabits(cloudHabits);
+    };
+
+    initializeData();
+  }, [user]);
 
   const handleUpdate = (updated: Habit[]) => {
     setHabits(updated);
-    saveHabits(updated);
+    if (user) {
+      saveHabitsCloud(user.uid, updated).catch(err => {
+        console.error("Failed to save to cloud:", err);
+      });
+    }
   };
 
 
@@ -47,25 +72,35 @@ const Index = () => {
         transition={{ duration: 0.3 }}
         className="sticky top-0 z-30 bg-background/60 backdrop-blur-xl border-b border-border/50"
       >
-        <div className="max-w-[1600px] mx-auto px-6 py-3.5 flex items-center justify-between">
+        <div className="max-w-[1600px] mx-auto px-3 sm:px-6 py-3 sm:py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
-              <span className="text-white text-xs font-bold">V</span>
+            <div className="w-7 h-7 rounded-lg bg-foreground/10 border border-border/60 flex items-center justify-center">
+              <Orbit className="w-4 h-4 text-foreground" strokeWidth={2.5} />
             </div>
             <div>
-              <h1 className="font-semibold text-sm text-foreground tracking-tight">Velvet</h1>
+              <h1 className="font-semibold text-sm text-foreground tracking-tight">Dott</h1>
             </div>
           </div>
+          <button
+            onClick={() => {
+              signOut(auth);
+              toast.success("Signed out successfully");
+            }}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border/40 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors text-xs font-medium"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            Sign Out
+          </button>
         </div>
       </motion.header>
 
-      <main className="max-w-[1600px] mx-auto px-6 py-8 space-y-6">
+      <main className="max-w-[1600px] mx-auto px-3 sm:px-6 py-4 sm:py-8 space-y-4 sm:space-y-6">
         {/* Greeting + Month Picker Row */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05, duration: 0.3 }}
-          className="flex items-center justify-between"
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-3"
         >
           <div>
             <h2 className="text-xl font-semibold text-foreground tracking-tight">

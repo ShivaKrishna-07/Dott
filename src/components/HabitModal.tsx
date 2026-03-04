@@ -108,7 +108,7 @@ export function HabitModal({ habit, dateKey, dateLabel, isPast, onClose, onSave 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
         onClick={onClose}
       >
         <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
@@ -118,7 +118,7 @@ export function HabitModal({ habit, dateKey, dateLabel, isPast, onClose, onSave 
           exit={{ opacity: 0, scale: 0.96, y: 10 }}
           transition={{ duration: 0.2, ease: "easeOut" }}
           onClick={(e) => e.stopPropagation()}
-          className="relative w-full max-w-lg glass-card shadow-2xl overflow-hidden max-h-[85vh] flex flex-col"
+          className="relative w-full sm:max-w-lg glass-card shadow-2xl overflow-hidden max-h-[100vh] sm:max-h-[85vh] flex flex-col sm:rounded-2xl rounded-t-2xl rounded-b-none sm:rounded-b-2xl"
         >
           {/* Header */}
           <div className="px-6 py-5 border-b border-border/60">
@@ -199,17 +199,24 @@ export function HabitModal({ habit, dateKey, dateLabel, isPast, onClose, onSave 
             </div>
 
             {/* Notes */}
-            <div>
-               <label className="text-xs font-medium text-muted-foreground mb-2.5 block uppercase tracking-wider">Notes</label>
-              <textarea
-                value={notes}
-                onChange={e => setNotes(e.target.value)}
-                disabled={isPast}
-                placeholder="How did it go?"
-                rows={3}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-background border border-border/60 text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/20 resize-none disabled:opacity-50 disabled:cursor-default"
-              />
-            </div>
+            {(notes || !isPast) && (
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-2.5 block uppercase tracking-wider">Notes</label>
+                {isPast ? (
+                  <p className="w-full px-3.5 py-3 rounded-xl bg-accent/30 border border-border/40 text-foreground text-sm leading-relaxed min-h-[80px]">
+                    {notes}
+                  </p>
+                ) : (
+                  <textarea
+                    value={notes}
+                    onChange={e => setNotes(e.target.value)}
+                    placeholder="How did it go?"
+                    rows={3}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-background border border-border/60 text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/20 resize-none"
+                  />
+                )}
+              </div>
+            )}
           </div>
 
           {/* Footer */}
@@ -225,7 +232,7 @@ export function HabitModal({ habit, dateKey, dateLabel, isPast, onClose, onSave 
               ) : (
                 <button
                   onClick={() => handleSave(true)}
-                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-medium text-sm hover:opacity-90 transition-opacity shadow-lg shadow-purple-500/20"
+                  className="w-full py-2.5 rounded-xl bg-foreground text-background font-medium text-sm hover:opacity-90 transition-opacity"
                 >
                   Mark Complete
                 </button>
@@ -303,18 +310,27 @@ function SubTaskNode({
             className="flex-1 px-2 py-1 text-sm bg-background border border-border/60 rounded focus:outline-none focus:ring-1 focus:ring-ring/50"
           />
         ) : (
-          <span className={`text-sm flex-1 ${node.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+          <span className={`text-sm flex-1 ${node.completed ? 'line-through text-muted-foreground' : 'text-foreground'} ${isPast ? 'opacity-80' : ''}`}>
             {node.name}
           </span>
         )}
 
-        <input
-          value={node.value || ''}
-          onChange={e => updateSubHabitValue(node.id, e.target.value)}
-          disabled={isPast || !editingSubHabit && node.completed && !node.value}
-          placeholder="Value..."
-          className="w-[70px] px-2 py-1 text-[11px] bg-accent/30 border border-transparent hover:border-border/60 focus:bg-background focus:border-border/60 rounded focus:outline-none focus:ring-1 focus:ring-ring/20 transition-all disabled:opacity-50 text-right"
-        />
+        {/* Read-only state for past tasks doesn't show an input at all if empty, simply shows the value text if it exists */}
+        {isPast ? (
+          node.value ? (
+            <span className="text-[11px] font-medium text-foreground px-2 py-1 bg-accent/30 rounded border border-border/40 min-w-[30px] text-center">
+              {node.value}
+            </span>
+          ) : null
+        ) : (
+          <input
+            value={node.value || ''}
+            onChange={e => updateSubHabitValue(node.id, e.target.value)}
+            disabled={!editingSubHabit && node.completed && !node.value}
+            placeholder="Value..."
+            className="w-[70px] px-2 py-1 text-[11px] bg-accent/30 border border-transparent hover:border-border/60 focus:bg-background focus:border-border/60 rounded focus:outline-none focus:ring-1 focus:ring-ring/20 transition-all disabled:opacity-50 text-right"
+          />
+        )}
 
         {!isPast && editingSubHabit?.id !== node.id && (
           <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">

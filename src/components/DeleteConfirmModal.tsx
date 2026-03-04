@@ -13,7 +13,7 @@ export function DeleteConfirmModal({ habitName, onConfirm, onCancel }: DeleteCon
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
       onClick={onCancel}
     >
       <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
@@ -23,7 +23,7 @@ export function DeleteConfirmModal({ habitName, onConfirm, onCancel }: DeleteCon
         exit={{ opacity: 0, scale: 0.96, y: 10 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
         onClick={e => e.stopPropagation()}
-        className="relative w-full max-w-sm glass-card shadow-2xl p-6"
+        className="relative w-full sm:max-w-sm glass-card shadow-2xl p-6 sm:rounded-2xl rounded-t-2xl rounded-b-none sm:rounded-b-2xl"
       >
         <div className="flex flex-col items-center text-center">
           <div className="w-11 h-11 rounded-xl bg-destructive/10 flex items-center justify-center mb-4">

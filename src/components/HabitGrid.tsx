@@ -96,7 +96,7 @@ export function HabitGrid({ year, month, habits, onUpdate }: HabitGridProps) {
           <table className="w-full border-collapse min-w-max">
             <thead>
               <tr>
-                <th className="sticky left-0 z-20 bg-card/90 backdrop-blur-sm p-0 w-[130px] min-w-[130px] max-w-[130px]">
+                <th className="sticky left-0 z-20 bg-card/90 backdrop-blur-sm p-0 w-[90px] sm:w-[130px] min-w-[90px] sm:min-w-[130px] max-w-[90px] sm:max-w-[130px]">
                   <div className="px-4 py-2.5 text-left grid-header border-b border-r border-border/60">
                     Task
                   </div>
@@ -105,7 +105,7 @@ export function HabitGrid({ year, month, habits, onUpdate }: HabitGridProps) {
                   const dayNum = d.getDate();
                   const dayName = DAYS[d.getDay()];
                   return (
-                    <th key={dayNum} className="p-0 min-w-[40px]">
+                    <th key={dayNum} className="p-0 min-w-[32px] sm:min-w-[40px]">
                       <div
                         className={`px-0.5 py-2.5 text-center border-b border-border/60 ${
                           isToday(d) ? 'bg-foreground/5' : ''
@@ -194,7 +194,7 @@ export function HabitGrid({ year, month, habits, onUpdate }: HabitGridProps) {
                             <button
                               onClick={() => !future && handleCellClick(habit.id, dateKey)}
                               disabled={future}
-                              className={`w-6 h-6 mx-auto flex items-center justify-center rounded-[8px] border transition-all ${
+                              className={`w-7 h-7 sm:w-6 sm:h-6 mx-auto flex items-center justify-center rounded-[8px] border transition-all ${
                                 future
                                   ? 'cell-disabled'
                                   : entry.completed

@@ -61,7 +61,7 @@ export function AddHabitModal({ onClose, onAdd }: AddHabitModalProps) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
       onClick={onClose}
     >
       <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
@@ -71,7 +71,7 @@ export function AddHabitModal({ onClose, onAdd }: AddHabitModalProps) {
         exit={{ opacity: 0, scale: 0.96, y: 10 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
         onClick={e => e.stopPropagation()}
-        className="relative w-full max-w-md glass-card shadow-2xl overflow-hidden"
+        className="relative w-full sm:max-w-md glass-card shadow-2xl overflow-hidden sm:rounded-2xl rounded-t-2xl rounded-b-none sm:rounded-b-2xl max-h-[90vh] sm:max-h-none"
       >
         {/* Header */}
         <div className="px-6 pt-6 pb-4">
