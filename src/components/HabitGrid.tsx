@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Trash2, Flame, TrendingUp, Check, Edit2 } from "lucide-react";
 import {
@@ -26,6 +26,7 @@ export function HabitGrid({ year, month, habits, onUpdate }: HabitGridProps) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedCell, setSelectedCell] = useState<{ habitId: string; dateKey: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Habit | null>(null);
+  const tableContainerRef = useRef<HTMLDivElement>(null);
 
   // Keyboard shortcut: press 'N' to add a new habit
   useEffect(() => {
@@ -47,9 +48,14 @@ export function HabitGrid({ year, month, habits, onUpdate }: HabitGridProps) {
   const days = getDaysInMonth(year, month);
   const today = new Date();
   const todayKey = formatDateKey(today);
+  
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayKey = formatDateKey(yesterday);
 
   const isToday = (d: Date) => formatDateKey(d) === todayKey;
-  const isPast = (d: Date) => formatDateKey(d) < todayKey;
+  // Allow editing today and yesterday, lock anything older
+  const isPast = (d: Date) => formatDateKey(d) < yesterdayKey;
   const isFuture = (d: Date) => formatDateKey(d) > todayKey;
 
   const addHabit = (name: string, icon: string, defaultSubHabits?: SubHabit[]) => {
@@ -89,18 +95,21 @@ export function HabitGrid({ year, month, habits, onUpdate }: HabitGridProps) {
     ? days.find(d => formatDateKey(d) === selectedCell.dateKey)
     : null;
 
-  // Get current week dates (Sun-Sat) for mobile view
-  const weekDays = useMemo(() => {
-    const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - today.getDay());
-    const result: Date[] = [];
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(startOfWeek);
-      d.setDate(startOfWeek.getDate() + i);
-      result.push(d);
+  // Auto-scroll to current date on mount or month change
+  useEffect(() => {
+    if (tableContainerRef.current) {
+      const todayIndex = days.findIndex(d => isToday(d));
+      // Try to scroll to today if we are in the current month, otherwise scroll to start
+      if (todayIndex !== -1) {
+        // Approximate calculation: Left sticky column is 130px. Each day column is ~40px.
+        // Scroll so today is visible in the middle/leftish area.
+        const scrollPosition = Math.max(0, (todayIndex * 40) - 100);
+        tableContainerRef.current.scrollTo({ left: scrollPosition, behavior: 'smooth' });
+      } else {
+        tableContainerRef.current.scrollTo({ left: 0 });
+      }
     }
-    return result;
-  }, [todayKey]);
+  }, [year, month, days]);
 
   return (
     <>
@@ -161,9 +170,9 @@ export function HabitGrid({ year, month, habits, onUpdate }: HabitGridProps) {
                 </div>
               )}
 
-              {/* Week circles */}
-              <div className="flex items-center justify-between gap-1">
-                {weekDays.map(d => {
+              {/* Month circles (Scrollable) */}
+              <div className="flex items-center gap-3 overflow-x-auto scrollbar-none pb-1 -mx-2 px-2 snap-x snap-mandatory">
+                {days.map(d => {
                   const dateKey = formatDateKey(d);
                   const entry = getEntry(habit, dateKey);
                   const future = isFuture(d);
@@ -176,7 +185,8 @@ export function HabitGrid({ year, month, habits, onUpdate }: HabitGridProps) {
                       key={dateKey}
                       onClick={() => !future && handleCellClick(habit.id, dateKey)}
                       disabled={future}
-                      className="flex flex-col items-center gap-1 flex-1"
+                      className="flex flex-col items-center gap-1 shrink-0 snap-center"
+                      style={{ width: '40px' }}
                     >
                       <span className={`text-[10px] font-mono ${todayD ? 'text-foreground font-semibold' : 'text-muted-foreground'}`}>
                         {dayName}
@@ -211,13 +221,13 @@ export function HabitGrid({ year, month, habits, onUpdate }: HabitGridProps) {
       </div>
 
       {/* ===== DESKTOP TABLE VIEW (>= 640px) ===== */}
-      <div className={`hidden sm:block glass-card overflow-hidden ${habits.length === 0 ? 'min-h-[350px]' : ''}`}>
-        <div className="overflow-x-auto scrollbar-thin">
-          <table className="w-full border-collapse min-w-max">
+      <div className={`hidden sm:block glass-card overflow-hidden`}>
+        <div ref={tableContainerRef} className="overflow-x-auto scrollbar-thin min-h-[300px]">
+          <table className="w-full border-collapse min-w-max border-spacing-0">
             <thead>
               <tr>
                 <th className="sticky left-0 z-20 bg-card/90 backdrop-blur-sm p-0 w-[130px] min-w-[130px] max-w-[130px]">
-                  <div className="px-4 py-2.5 text-left grid-header border-b border-r border-border/60">
+                  <div className="px-4 py-2.5 text-left grid-header border-b border-border/60">
                     Task
                   </div>
                 </th>
@@ -238,7 +248,7 @@ export function HabitGrid({ year, month, habits, onUpdate }: HabitGridProps) {
                   );
                 })}
                 <th className="sticky right-0 z-20 bg-card/90 backdrop-blur-sm p-0 min-w-[50px]">
-                  <div className="px-1.5 py-2.5 text-center border-b border-l border-border/60 grid-header">
+                  <div className="px-1.5 py-2.5 text-center border-b border-border/60 grid-header">
                     <TrendingUp className="w-3 h-3 mx-auto text-muted-foreground" />
                   </div>
                 </th>
@@ -259,7 +269,7 @@ export function HabitGrid({ year, month, habits, onUpdate }: HabitGridProps) {
                       className="habit-row group"
                     >
                       <td className="sticky left-0 z-10 bg-card/90 backdrop-blur-sm p-0">
-                        <div className="px-2.5 py-2.5 flex items-center gap-2 border-r border-border/60 group/row min-w-0">
+                        <div className="px-2.5 py-2.5 flex items-center gap-2 group/row min-w-0">
                           {(() => {
                             const IconComponent = ICON_MAP[habit.icon as keyof typeof ICON_MAP] || ICON_MAP.target;
                             return <IconComponent className="w-[18px] h-[18px] shrink-0 text-muted-foreground group-hover/row:text-foreground transition-colors" />;
@@ -330,7 +340,7 @@ export function HabitGrid({ year, month, habits, onUpdate }: HabitGridProps) {
                         );
                       })}
                       <td className="sticky right-0 z-10 bg-card/90 backdrop-blur-sm p-0 shadow-[-4px_0_12px_-4px_rgba(0,0,0,0.1)]">
-                        <div className="px-1.5 py-2 flex items-center justify-center border-l border-border/60 h-full">
+                        <div className="px-1.5 py-2 flex items-center justify-center h-full">
                           <ProgressRing progress={rate} size={20} strokeWidth={2} color={
                             rate >= 80 ? 'hsl(160 60% 50%)' : rate >= 50 ? 'hsl(38 92% 55%)' : 'hsl(var(--muted-foreground))'
                           } />
@@ -342,8 +352,8 @@ export function HabitGrid({ year, month, habits, onUpdate }: HabitGridProps) {
                 {habits.length > 0 && (
                   <tr className="bg-card/30">
                     <td className="sticky left-0 z-10 bg-card/90 backdrop-blur-sm p-0">
-                      <div className="px-2.5 py-2 flex justify-end items-center border-r border-border/60">
-                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Daily</span>
+                      <div className="px-3.5 py-2 mt-2 flex justify-end items-center">
+                        <Flame className="w-3.5 h-3.5 text-muted-foreground/60" />
                       </div>
                     </td>
                     {days.map(d => {
@@ -353,21 +363,23 @@ export function HabitGrid({ year, month, habits, onUpdate }: HabitGridProps) {
                       const dailyRate = total > 0 ? Math.round((done / total) * 100) : 0;
                       return (
                         <td key={`daily-${dateKey}`} className="p-0.5">
-                          <div className="w-full h-6 flex items-center justify-center">
-                            {dailyRate > 0 && (
+                          <div className="w-full h-6 mt-2 flex items-center justify-center">
+                            {dailyRate > 0 ? (
                               <ProgressRing 
                                 progress={dailyRate} 
                                 size={14} 
                                 strokeWidth={2} 
                                 color={dailyRate >= 100 ? 'hsl(160 60% 50%)' : 'hsl(var(--muted-foreground))'} 
                               />
+                            ) : (
+                              <div className="w-3.5 h-3.5 rounded-full border-2 border-border/30" />
                             )}
                           </div>
                         </td>
                       );
                     })}
                     <td className="sticky right-0 z-10 bg-card/90 backdrop-blur-sm p-0 shadow-[-4px_0_12px_-4px_rgba(0,0,0,0.1)]">
-                      <div className="px-1.5 py-2 flex border-l border-border/60 h-full"></div>
+                      <div className="px-1.5 py-2 mt-2 flex h-full"></div>
                     </td>
                   </tr>
                 )}

@@ -265,10 +265,12 @@ function SubTaskNode({
   removeSubHabit, addChildSubHabit
 }: SubTaskNodeProps) {
   const [newChildName, setNewChildName] = useState('');
+  const [isAddingChild, setIsAddingChild] = useState(false);
 
   const handleAddChild = () => {
     addChildSubHabit(node.id, newChildName);
     setNewChildName('');
+    setIsAddingChild(false);
   };
 
   return (
@@ -326,25 +328,35 @@ function SubTaskNode({
           <input
             value={node.value || ''}
             onChange={e => updateSubHabitValue(node.id, e.target.value)}
-            disabled={!editingSubHabit && node.completed && !node.value}
-            placeholder="Value..."
-            className="w-[70px] px-2 py-1 text-[11px] bg-accent/30 border border-transparent hover:border-border/60 focus:bg-background focus:border-border/60 rounded focus:outline-none focus:ring-1 focus:ring-ring/20 transition-all disabled:opacity-50 text-right"
+            placeholder="Value"
+            className="w-[80px] px-2 py-1 flex-shrink-0 text-[11px] bg-accent/30 border border-transparent hover:border-border/60 focus:bg-background focus:border-border/60 rounded focus:outline-none focus:ring-1 focus:ring-ring/20 transition-all text-center placeholder:text-muted-foreground/50"
           />
         )}
 
         {!isPast && editingSubHabit?.id !== node.id && (
-          <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex items-center ml-1 shrink-0">
+            {depth < 3 && (
+              <button
+                onClick={() => setIsAddingChild(!isAddingChild)}
+                className="p-1.5 rounded-lg hover:bg-accent transition-all text-muted-foreground hover:text-foreground"
+                title="Add Sub-task"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            )}
             <button
               onClick={() => startEditSubHabit(node)}
-              className="p-1 rounded-lg hover:bg-accent transition-all mr-0.5"
+              className="p-1.5 rounded-lg hover:bg-accent transition-all text-muted-foreground hover:text-foreground"
+              title="Edit Sub-task"
             >
-              <Edit2 className="w-3 h-3 text-muted-foreground hover:text-foreground" />
+              <Edit2 className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => removeSubHabit(node.id)}
-              className="p-1 rounded-lg hover:bg-destructive/10 transition-all"
+              className="p-1.5 rounded-lg hover:bg-destructive/10 transition-all text-muted-foreground hover:text-destructive"
+              title="Delete Sub-task"
             >
-              <Trash2 className="w-3 h-3 text-muted-foreground hover:text-destructive" />
+              <Trash2 className="w-3.5 h-3.5" />
             </button>
           </div>
         )}
@@ -373,23 +385,26 @@ function SubTaskNode({
       )}
 
       {/* Add nested task inline if depth < 3 (4 levels total) */}
-      {!isPast && depth < 3 && (
-        <div className={`flex gap-1.5 opacity-0 focus-within:opacity-100 hover:opacity-100 transition-opacity ${depth > 0 ? 'ml-6' : 'ml-2'} mt-1`}>
+      {!isPast && depth < 3 && isAddingChild && (
+        <div className={`flex items-center gap-1.5 ${depth > 0 ? 'ml-6' : 'ml-2'} mt-1 mb-2`}>
           <input
             value={newChildName}
             onChange={e => setNewChildName(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleAddChild()}
-            placeholder="Add nested task..."
-            className="flex-1 px-2 py-1 bg-transparent border-b border-border/20 text-muted-foreground text-[10px] focus:outline-none focus:border-border focus:text-foreground transition-colors"
+            onKeyDown={e => {
+              if (e.key === 'Enter') handleAddChild();
+              if (e.key === 'Escape') { setNewChildName(''); setIsAddingChild(false); }
+            }}
+            placeholder="Name of sub-task..."
+            autoFocus
+            className="flex-1 px-3 py-1.5 rounded-md text-[13px] bg-accent/30 border border-border/60 focus:outline-none focus:ring-1 focus:ring-ring/40 text-foreground shadow-sm"
           />
-          {newChildName.trim() && (
-            <button
-              onClick={handleAddChild}
-              className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors shrink-0"
-            >
-              <Plus className="w-3 h-3" />
-            </button>
-          )}
+          <button
+            onClick={handleAddChild}
+            disabled={!newChildName.trim()}
+            className="p-1.5 rounded-md bg-foreground text-background hover:opacity-90 transition-opacity disabled:opacity-50"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
         </div>
       )}
     </motion.div>
