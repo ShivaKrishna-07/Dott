@@ -1,4 +1,4 @@
-import { collection, doc, getDocs, setDoc, deleteDoc, query, where, orderBy } from 'firebase/firestore';
+import { collection, doc, getDocs, setDoc, deleteDoc, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from './firebase';
 
 export interface Note {
@@ -42,6 +42,20 @@ export async function loadNotesCloud(userId: string): Promise<Note[]> {
     console.error('Error loading notes:', err);
     return [];
   }
+}
+
+export function onNotesSnapshot(userId: string, callback: (notes: Note[]) => void) {
+  const q = query(
+    collection(db, NOTES_COLLECTION),
+    where('userId', '==', userId)
+  );
+  return onSnapshot(q, (snapshot) => {
+    const notes = snapshot.docs.map(d => d.data() as Note);
+    callback(notes.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()));
+  }, (err) => {
+    console.error('Error in notes snapshot listener:', err);
+    callback([]);
+  });
 }
 
 export async function saveNoteCloud(note: Note): Promise<void> {

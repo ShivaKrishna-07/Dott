@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Trash2, Flame, TrendingUp, Check, Edit2 } from "lucide-react";
 import {
   Habit, HabitEntry, getDaysInMonth, formatDateKey, SubHabit,
-  getEntry, getStreak, getCompletionRate, createHabit
+  getEntry, getStreak, getCompletionRate
 } from "@/lib/habitStore";
 import { HabitModal } from "./HabitModal";
 import { AddHabitModal } from "./AddHabitModal";
@@ -19,10 +19,12 @@ interface HabitGridProps {
   year: number;
   month: number;
   habits: Habit[];
-  onUpdate: (habits: Habit[]) => void;
+  onAdd: (name: string, icon: string, defaultSubHabits?: SubHabit[], target?: number, unit?: string) => void;
+  onUpdateHabit: (habit: Habit) => void;
+  onDelete: (habitId: string) => void;
 }
 
-export function HabitGrid({ year, month, habits, onUpdate }: HabitGridProps) {
+export function HabitGrid({ year, month, habits, onAdd, onUpdateHabit, onDelete }: HabitGridProps) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedCell, setSelectedCell] = useState<{ habitId: string; dateKey: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Habit | null>(null);
@@ -59,15 +61,12 @@ export function HabitGrid({ year, month, habits, onUpdate }: HabitGridProps) {
   const isFuture = (d: Date) => formatDateKey(d) > todayKey;
 
   const addHabit = (name: string, icon: string, defaultSubHabits?: SubHabit[], target?: number, unit?: string) => {
-    const newHabit = createHabit(name, icon, defaultSubHabits, target, unit);
-    onUpdate([...habits, newHabit]);
-    toast.success(`${name} added!`);
+    onAdd(name, icon, defaultSubHabits, target, unit);
   };
 
   const confirmDelete = () => {
     if (!deleteTarget) return;
-    toast(`${deleteTarget.name} deleted`);
-    onUpdate(habits.filter(h => h.id !== deleteTarget.id));
+    onDelete(deleteTarget.id);
     setDeleteTarget(null);
   };
 
@@ -76,17 +75,21 @@ export function HabitGrid({ year, month, habits, onUpdate }: HabitGridProps) {
   };
 
   const saveEditHabit = (updatedHabit: Habit) => {
-    onUpdate(habits.map(h => h.id === updatedHabit.id ? updatedHabit : h));
+    onUpdateHabit(updatedHabit);
     setEditingHabit(null);
   };
 
   const handleSaveEntry = (entry: HabitEntry) => {
     if (!selectedCell) return;
-    const updated = habits.map(h => {
-      if (h.id !== selectedCell.habitId) return h;
-      return { ...h, entries: { ...h.entries, [entry.date]: entry } };
-    });
-    onUpdate(updated);
+    const targetHabit = habits.find(h => h.id === selectedCell.habitId);
+    if (!targetHabit) return;
+    
+    // Create the updated habit copy right here and pass it
+    const updatedHabit = {
+      ...targetHabit,
+      entries: { ...targetHabit.entries, [entry.date]: entry }
+    };
+    onUpdateHabit(updatedHabit);
   };
 
   const selectedHabit = selectedCell ? habits.find(h => h.id === selectedCell.habitId) : null;

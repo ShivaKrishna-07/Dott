@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Plus, Trash2, ListChecks, Check, Edit2 } from "lucide-react";
 import { Habit, HabitEntry, getEntry, SubHabit } from "@/lib/habitStore";
@@ -51,7 +51,7 @@ export function HabitModal({ habit, dateKey, dateLabel, isPast, onClose, onSave 
   const [newSubHabit, setNewSubHabit] = useState('');
   const [editingSubHabit, setEditingSubHabit] = useState<{ id: string; name: string } | null>(null);
 
-  const autoSave = (newSubHabits: SubHabit[]) => {
+  const autoSave = useCallback((newSubHabits: SubHabit[]) => {
     let finalCompleted = isCompleted;
     let numericValue = undefined;
 
@@ -67,13 +67,18 @@ export function HabitModal({ habit, dateKey, dateLabel, isPast, onClose, onSave 
       notes,
       subHabits: newSubHabits,
     });
-  };
+  }, [isCompleted, habit.target, value, dateKey, notes, onSave]);
+
+  const handleClose = useCallback(() => {
+    autoSave(subHabits);
+    onClose();
+  }, [subHabits, autoSave, onClose]);
 
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') handleClose(); };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [onClose]);
+  }, [handleClose]);
 
   const addTopLevelSubHabit = () => {
     if (!newSubHabit.trim()) return;
@@ -151,7 +156,7 @@ export function HabitModal({ habit, dateKey, dateLabel, isPast, onClose, onSave 
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
-        onClick={onClose}
+        onClick={handleClose}
       >
         <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
         <motion.div
@@ -177,7 +182,7 @@ export function HabitModal({ habit, dateKey, dateLabel, isPast, onClose, onSave 
                   <p className="text-xs text-muted-foreground mt-0.5">{dateLabel}</p>
                 </div>
               </div>
-              <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-accent transition-colors">
+              <button onClick={handleClose} className="p-1.5 rounded-lg hover:bg-accent transition-colors">
                 <X className="w-4 h-4 text-muted-foreground" />
               </button>
             </div>

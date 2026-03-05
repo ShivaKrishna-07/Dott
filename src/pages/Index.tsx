@@ -4,13 +4,13 @@ import { motion } from "framer-motion";
 import { MonthPicker } from "@/components/MonthPicker";
 import { HabitGrid } from "@/components/HabitGrid";
 import { ContributionHeatmap } from "@/components/ContributionHeatmap";
-import { Habit, loadHabitsCloud, saveHabitsCloud, formatDateKey, getEntry } from "@/lib/habitStore";
+import { Habit, saveHabitCloud, deleteHabitCloud, createHabit, formatDateKey, getEntry, onHabitsSnapshot } from "@/lib/habitStore";
 import { auth } from "@/lib/firebase";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { signOut } from "firebase/auth";
 import { toast } from "sonner";
-import { LogOut, Orbit, LayoutList, FileText, Download, User } from "lucide-react";
-import { Note, loadNotesCloud, saveNoteCloud, deleteNoteCloud } from "@/lib/noteStore";
+import { LogOut, Orbit, LayoutList, FileText, Download, User, Loader2 } from "lucide-react";
+import { Note, saveNoteCloud, deleteNoteCloud, onNotesSnapshot } from "@/lib/noteStore";
 import { NotesPage } from "@/components/NotesPage";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -30,6 +30,8 @@ const Index = () => {
   const [month, setMonth] = useState(now.getMonth());
   const [habits, setHabits] = useState<Habit[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
+  const [loadingHabits, setLoadingHabits] = useState(true);
+  const [loadingNotes, setLoadingNotes] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') === 'notes' ? 'notes' : 'tasks';
   const [deferredPrompt, setDeferredPrompt] = useState<any>((window as any).deferredPrompt || null);
@@ -60,23 +62,28 @@ const Index = () => {
   useEffect(() => {
     if (!user) return;
 
-    const initializeData = async () => {
-      let cloudHabits = await loadHabitsCloud(user.uid);
+    setLoadingHabits(true);
+    const unsubscribeHabits = onHabitsSnapshot(user.uid, (data) => {
+      setHabits(data);
+      setLoadingHabits(false);
+    });
 
-      setHabits(cloudHabits);
-      
-      const cloudNotes = await loadNotesCloud(user.uid);
-      setNotes(cloudNotes);
+    setLoadingNotes(true);
+    const unsubscribeNotes = onNotesSnapshot(user.uid, (data) => {
+      setNotes(data);
+      setLoadingNotes(false);
+    });
+
+    return () => {
+      unsubscribeHabits();
+      unsubscribeNotes();
     };
-
-    initializeData();
   }, [user]);
 
   const handleSaveNote = async (note: Note) => {
     if (!user) return;
     try {
       await saveNoteCloud(note);
-      setNotes(await loadNotesCloud(user.uid));
     } catch (err) {
       console.error("Failed to save note:", err);
       toast.error("Failed to save note");
@@ -87,7 +94,6 @@ const Index = () => {
     if (!user) return;
     try {
       await deleteNoteCloud(noteId);
-      setNotes(await loadNotesCloud(user.uid));
       toast("Note deleted");
     } catch (err) {
       console.error("Failed to delete note:", err);
@@ -95,12 +101,41 @@ const Index = () => {
     }
   };
 
-  const handleUpdate = (updated: Habit[]) => {
-    setHabits(updated);
-    if (user) {
-      saveHabitsCloud(user.uid, updated).catch(err => {
-        console.error("Failed to save to cloud:", err);
-      });
+  const handleAdd = async (name: string, icon: string, defaultSubHabits?: any[], target?: number, unit?: string) => {
+    if (!user) return;
+    const newHabit = createHabit(user.uid, name, icon, defaultSubHabits, target, unit);
+    // Optimistic UI update
+    setHabits([...habits, newHabit]);
+    try {
+      await saveHabitCloud(newHabit);
+      toast.success(`${name} added!`);
+    } catch (err) {
+      console.error("Failed to save to cloud:", err);
+      toast.error(`Failed to add ${name}`);
+    }
+  };
+
+  const handleUpdateHabit = async (updated: Habit) => {
+    if (!user) return;
+    setHabits(habits.map(h => h.id === updated.id ? updated : h));
+    try {
+      await saveHabitCloud(updated);
+    } catch (err) {
+      console.error("Failed to save to cloud:", err);
+      toast.error(`Failed to update ${updated.name}`);
+    }
+  };
+
+  const handleDelete = async (habitId: string) => {
+    if (!user) return;
+    const habitName = habits.find(h => h.id === habitId)?.name;
+    setHabits(habits.filter(h => h.id !== habitId));
+    try {
+      await deleteHabitCloud(habitId);
+      if (habitName) toast(`${habitName} deleted`);
+    } catch (err) {
+      console.error("Failed to delete from cloud:", err);
+      toast.error(`Failed to delete task`);
     }
   };
 
@@ -142,7 +177,20 @@ const Index = () => {
                     </Avatar>
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48 glass-card border-border/40 p-1 rounded-xl shadow-xl">
+                <DropdownMenuContent align="end" className="w-72 glass-card border-border/40 p-1 rounded-xl shadow-xl">
+                  <div className="flex items-center gap-3 px-2 py-1.5 focus:outline-none">
+                    <Avatar className="w-9 h-9 border border-border/50 shadow-sm">
+                      <AvatarImage src={user.photoURL || undefined} alt={user.displayName || 'User'} />
+                      <AvatarFallback className="bg-accent">
+                        {user.displayName ? user.displayName.charAt(0).toUpperCase() : <User className="w-4 h-4 text-muted-foreground" />}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col min-w-0">
+                      <p className="text-sm font-medium text-foreground leading-none truncate mb-1.5">{user.displayName || "User"}</p>
+                      <p className="text-xs text-muted-foreground leading-none truncate">{user.email || ""}</p>
+                    </div>
+                  </div>
+                  <DropdownMenuSeparator className="bg-border/40 my-1 mx-1" />
                   {deferredPrompt && (
                     <>
                       <DropdownMenuItem 
@@ -158,12 +206,12 @@ const Index = () => {
                   <DropdownMenuItem 
                     onClick={() => {
                       signOut(auth);
-                      toast.success("Signed out successfully");
+                      toast.success("Logged out successfully");
                     }}
                     className="flex items-center gap-2 cursor-pointer text-sm font-medium focus:bg-destructive/10 focus:text-destructive text-destructive rounded-lg py-1.5 px-2.5"
                   >
                     <LogOut className="w-4 h-4 ml-0.5" />
-                    Sign Out
+                    Logout
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -231,7 +279,21 @@ const Index = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15, duration: 0.3 }}
             >
-              <HabitGrid year={year} month={month} habits={habits} onUpdate={handleUpdate} />
+              {loadingHabits ? (
+                <div className="flex flex-col items-center justify-center p-16 text-center glass-card">
+                  <Loader2 className="w-8 h-8 text-foreground/50 animate-spin mb-4" />
+                  <p className="text-sm font-medium text-foreground">Loading Tasks...</p>
+                </div>
+              ) : (
+                <HabitGrid 
+                  year={year} 
+                  month={month} 
+                  habits={habits} 
+                  onAdd={handleAdd}
+                  onUpdateHabit={handleUpdateHabit}
+                  onDelete={handleDelete}
+                />
+              )}
             </motion.div>
 
             {/* Contribution Heatmap */}
@@ -245,11 +307,17 @@ const Index = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            {user && (
+            {loadingNotes ? (
+              <div className="flex flex-col items-center justify-center p-16 text-center glass-card">
+                <Loader2 className="w-8 h-8 text-foreground/50 animate-spin mb-4" />
+                <p className="text-sm font-medium text-foreground">Loading Notes...</p>
+              </div>
+            ) : user && (
               <NotesPage
                 userId={user.uid}
                 notes={notes}
-                onUpdateNotes={setNotes}
+                // No need to update local state; snapshot handles it
+                onUpdateNotes={() => {}}
                 onSaveNote={handleSaveNote}
                 onDeleteNote={handleDeleteNote}
               />

@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, deleteDoc, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from './firebase';
 
 export interface SubHabit {
@@ -22,6 +22,7 @@ export interface HabitEntry {
 
 export interface Habit {
   id: string;
+  userId: string;
   name: string;
   icon: string;
   color: string;
@@ -43,28 +44,48 @@ export function getRandomColor(): string {
 }
 
 
-export async function loadHabitsCloud(userId: string): Promise<Habit[]> {
-  try {
-    const docRef = doc(db, 'users', userId);
-    const snap = await getDoc(docRef);
-    if (snap.exists() && snap.data().habits) {
-      return snap.data().habits;
+export function onHabitsSnapshot(userId: string, callback: (habits: Habit[]) => void) {
+  const q = query(
+    collection(db, 'tasks'),
+    where('userId', '==', userId)
+  );
+  return onSnapshot(q, (snap) => {
+    const tasks = snap.docs.map(d => d.data() as Habit);
+    // Sort tasks by creation time ascending
+    callback(tasks.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()));
+  }, (err) => {
+    console.error("Error in tasks snapshot listener:", err);
+    callback([]);
+  });
+}
+
+function removeUndefined(obj: any): any {
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(removeUndefined);
+  const result: any = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) {
+      result[key] = removeUndefined(value);
     }
-    return [];
-  } catch (err) {
-    console.error("Error loading habits from cloud:", err);
-    return [];
   }
+  return result;
 }
 
-export async function saveHabitsCloud(userId: string, habits: Habit[]): Promise<void> {
-  const docRef = doc(db, 'users', userId);
-  await setDoc(docRef, { habits }, { merge: true });
+export async function saveHabitCloud(habit: Habit): Promise<void> {
+  const docRef = doc(db, 'tasks', habit.id);
+  const cleanHabit = removeUndefined(habit);
+  await setDoc(docRef, cleanHabit, { merge: true });
 }
 
-export function createHabit(name: string, icon: string, defaultSubHabits?: SubHabit[], target?: number, unit?: string): Habit {
+export async function deleteHabitCloud(habitId: string): Promise<void> {
+  const docRef = doc(db, 'tasks', habitId);
+  await deleteDoc(docRef);
+}
+
+export function createHabit(userId: string, name: string, icon: string, defaultSubHabits?: SubHabit[], target?: number, unit?: string): Habit {
   return {
     id: crypto.randomUUID(),
+    userId,
     name,
     icon,
     color: getRandomColor(),
