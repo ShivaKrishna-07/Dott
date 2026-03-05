@@ -23,11 +23,11 @@ export default defineConfig(({ mode }) => ({
         enabled: true,
       },
       manifest: {
-        name: 'Daily Bloom',
-        short_name: 'Bloom',
+        name: 'Dott',
+        short_name: 'Dott',
         description: 'Track your daily habits and goals',
-        theme_color: '#ffffff',
-        background_color: '#ffffff',
+        theme_color: '#09090b',
+        background_color: '#09090b',
         display: 'standalone',
         start_url: '/',
         icons: [

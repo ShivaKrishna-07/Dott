@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Pin, PinOff, Trash2 } from 'lucide-react';
+import { Pin, PinOff, Trash2, X } from 'lucide-react';
 import { Note, formatNoteDate } from '@/lib/noteStore';
 
 interface NoteEditorProps {
@@ -34,18 +34,23 @@ export function NoteEditor({ note, onSave, onDelete, onClose }: NoteEditorProps)
   }, [content]);
 
   const handleSaveClick = () => {
-    const trimmedTitle = title.trim();
+    let finalTitle = title.trim();
     const trimmedContent = content.trim();
 
     // Don't save empty notes if it's new
-    if (!trimmedTitle && !trimmedContent && isNew) {
+    if (!finalTitle && !trimmedContent && isNew) {
       onClose();
       return;
+    }
+    
+    // If we have content but no title, fallback
+    if (!finalTitle && trimmedContent) {
+      finalTitle = 'Untitled';
     }
 
     onSave({
       ...note,
-      title: trimmedTitle,
+      title: finalTitle,
       content: trimmedContent,
       isPinned,
       color: 'default',
@@ -101,6 +106,13 @@ export function NoteEditor({ note, onSave, onDelete, onClose }: NoteEditorProps)
                 <Trash2 className="w-4.5 h-4.5 text-muted-foreground hover:text-destructive" />
               </button>
             )}
+            <button
+              onClick={handleCancelClick}
+              className="p-1.5 rounded-lg hover:bg-accent transition-colors ml-1"
+              title="Close"
+            >
+              <X className="w-4.5 h-4.5 text-muted-foreground" />
+            </button>
           </div>
         </div>
 
@@ -137,7 +149,7 @@ export function NoteEditor({ note, onSave, onDelete, onClose }: NoteEditorProps)
             </button>
             <button
               onClick={handleSaveClick}
-              disabled={!title.trim()}
+              disabled={!title.trim() && !content.trim()}
               className="px-4 py-2 rounded-xl bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity flex-1 sm:flex-none disabled:opacity-30 disabled:cursor-not-allowed"
             >
               Save
