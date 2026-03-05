@@ -51,6 +51,24 @@ export function HabitModal({ habit, dateKey, dateLabel, isPast, onClose, onSave 
   const [newSubHabit, setNewSubHabit] = useState('');
   const [editingSubHabit, setEditingSubHabit] = useState<{ id: string; name: string } | null>(null);
 
+  const autoSave = (newSubHabits: SubHabit[]) => {
+    let finalCompleted = isCompleted;
+    let numericValue = undefined;
+
+    if (habit.target !== undefined) {
+      numericValue = value ? parseFloat(value) : 0;
+      finalCompleted = numericValue >= habit.target;
+    }
+
+    onSave({
+      date: dateKey,
+      completed: finalCompleted,
+      value: numericValue,
+      notes,
+      subHabits: newSubHabits,
+    });
+  };
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', handler);
@@ -59,23 +77,31 @@ export function HabitModal({ habit, dateKey, dateLabel, isPast, onClose, onSave 
 
   const addTopLevelSubHabit = () => {
     if (!newSubHabit.trim()) return;
-    setSubHabits([...subHabits, { id: crypto.randomUUID(), name: newSubHabit.trim(), completed: false }]);
+    const updated = [...subHabits, { id: crypto.randomUUID(), name: newSubHabit.trim(), completed: false }];
+    setSubHabits(updated);
+    autoSave(updated);
     setNewSubHabit('');
   };
 
   const toggleSubHabit = (id: string) => {
     if (isPast) return;
-    setSubHabits(updateNode(subHabits, id, s => ({ ...s, completed: !s.completed })));
+    const updated = updateNode(subHabits, id, s => ({ ...s, completed: !s.completed }));
+    setSubHabits(updated);
+    autoSave(updated);
   };
 
   const removeSubHabit = (id: string) => {
     if (isPast) return;
-    setSubHabits(deleteNode(subHabits, id));
+    const updated = deleteNode(subHabits, id);
+    setSubHabits(updated);
+    autoSave(updated);
   };
 
-  const updateSubHabitValue = (id: string, value: string) => {
+  const updateSubHabitValue = (id: string, newValue: string) => {
     if (isPast) return;
-    setSubHabits(updateNode(subHabits, id, s => ({ ...s, value })));
+    const updated = updateNode(subHabits, id, s => ({ ...s, value: newValue }));
+    setSubHabits(updated);
+    autoSave(updated);
   };
 
   const startEditSubHabit = (sh: SubHabit) => {
@@ -85,14 +111,18 @@ export function HabitModal({ habit, dateKey, dateLabel, isPast, onClose, onSave 
 
   const saveEditSubHabit = () => {
     if (!editingSubHabit || !editingSubHabit.name.trim()) return;
-    setSubHabits(updateNode(subHabits, editingSubHabit.id, s => ({ ...s, name: editingSubHabit.name.trim() })));
+    const updated = updateNode(subHabits, editingSubHabit.id, s => ({ ...s, name: editingSubHabit.name.trim() }));
+    setSubHabits(updated);
+    autoSave(updated);
     setEditingSubHabit(null);
   };
 
   const addChildSubHabit = (parentId: string, name: string) => {
     if (!name.trim() || isPast) return;
     const newNode: SubHabit = { id: crypto.randomUUID(), name: name.trim(), completed: false };
-    setSubHabits(addChildNode(subHabits, parentId, newNode));
+    const updated = addChildNode(subHabits, parentId, newNode);
+    setSubHabits(updated);
+    autoSave(updated);
   };
 
   const handleSave = (completedToggle?: boolean) => {

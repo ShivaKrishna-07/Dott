@@ -44,7 +44,7 @@ export function HabitGrid({ year, month, habits, onUpdate }: HabitGridProps) {
     return () => window.removeEventListener('keydown', handler);
   }, [showAddModal, selectedCell, deleteTarget]);
 
-  const [editingHabit, setEditingHabit] = useState<{ id: string; name: string } | null>(null);
+  const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const days = getDaysInMonth(year, month);
   const today = new Date();
   const todayKey = formatDateKey(today);
@@ -75,9 +75,8 @@ export function HabitGrid({ year, month, habits, onUpdate }: HabitGridProps) {
     setSelectedCell({ habitId, dateKey });
   };
 
-  const saveEditHabit = () => {
-    if (!editingHabit || !editingHabit.name.trim()) return;
-    onUpdate(habits.map(h => h.id === editingHabit.id ? { ...h, name: editingHabit.name.trim() } : h));
+  const saveEditHabit = (updatedHabit: Habit) => {
+    onUpdate(habits.map(h => h.id === updatedHabit.id ? updatedHabit : h));
     setEditingHabit(null);
   };
 
@@ -139,7 +138,7 @@ export function HabitGrid({ year, month, habits, onUpdate }: HabitGridProps) {
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                   <button
-                    onClick={() => setEditingHabit({ id: habit.id, name: habit.name })}
+                    onClick={() => setEditingHabit(habit)}
                     className="p-1.5 rounded-lg hover:bg-accent transition-all"
                   >
                     <Edit2 className="w-3.5 h-3.5 text-muted-foreground" />
@@ -153,22 +152,7 @@ export function HabitGrid({ year, month, habits, onUpdate }: HabitGridProps) {
                 </div>
               </div>
 
-              {/* Inline edit */}
-              {editingHabit?.id === habit.id && (
-                <div className="mb-3">
-                  <input
-                    value={editingHabit.name}
-                    onChange={(e) => setEditingHabit({ ...editingHabit, name: e.target.value })}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') saveEditHabit();
-                      if (e.key === 'Escape') setEditingHabit(null);
-                    }}
-                    onBlur={saveEditHabit}
-                    autoFocus
-                    className="w-full px-3 py-2 text-sm bg-background border border-border/60 rounded-lg focus:outline-none focus:ring-1 focus:ring-ring/50"
-                  />
-                </div>
-              )}
+              {/* Inline edit removed in favor of modal */}
 
               {/* Month circles (Scrollable) */}
               <div className="flex items-center gap-3 overflow-x-auto scrollbar-none pb-1 -mx-2 px-2 snap-x snap-mandatory">
@@ -316,17 +300,7 @@ export function HabitGrid({ year, month, habits, onUpdate }: HabitGridProps) {
                             return <IconComponent className="w-[18px] h-[18px] shrink-0 text-muted-foreground group-hover/row:text-foreground transition-colors" />;
                           })()}
                           {editingHabit?.id === habit.id ? (
-                            <input
-                              value={editingHabit.name}
-                              onChange={(e) => setEditingHabit({ ...editingHabit, name: e.target.value })}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') saveEditHabit();
-                                if (e.key === 'Escape') setEditingHabit(null);
-                              }}
-                              onBlur={saveEditHabit}
-                              autoFocus
-                              className="flex-1 min-w-0 px-2 py-1 text-sm bg-background border border-border/60 rounded focus:outline-none focus:ring-1 focus:ring-ring/50"
-                            />
+                            <span className="text-sm font-medium text-foreground truncate flex-1 opacity-50">{habit.name}</span>
                           ) : (
                             <span className="text-sm font-medium text-foreground truncate flex-1">{habit.name}</span>
                           )}
@@ -339,7 +313,7 @@ export function HabitGrid({ year, month, habits, onUpdate }: HabitGridProps) {
                           {editingHabit?.id !== habit.id && (
                             <div className="flex items-center opacity-0 group-hover/row:opacity-100 transition-opacity shrink-0 ml-1">
                               <button
-                                onClick={() => setEditingHabit({ id: habit.id, name: habit.name })}
+                                onClick={() => setEditingHabit(habit)}
                                 className="p-1.5 rounded-lg hover:bg-accent transition-all mr-0.5"
                               >
                                 <Edit2 className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground" />
@@ -447,6 +421,16 @@ export function HabitGrid({ year, month, habits, onUpdate }: HabitGridProps) {
       <AnimatePresence>
         {showAddModal && (
           <AddHabitModal onClose={() => setShowAddModal(false)} onAdd={addHabit} />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {editingHabit && (
+          <AddHabitModal 
+            onClose={() => setEditingHabit(null)} 
+            onAdd={addHabit} 
+            habitToEdit={editingHabit}
+            onUpdate={saveEditHabit}
+          />
         )}
       </AnimatePresence>
       <AnimatePresence>

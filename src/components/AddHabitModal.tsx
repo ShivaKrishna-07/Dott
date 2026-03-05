@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { X, Sparkles, PenLine } from "lucide-react";
 import { ICON_MAP, IconName } from "@/lib/icons";
-import { SubHabit } from "@/lib/habitStore";
+import { Habit, SubHabit } from "@/lib/habitStore";
 import {
   Select,
   SelectContent,
@@ -41,20 +41,35 @@ const TEMPLATES: { name: string, icon: IconName, category: string, defaultSubHab
 interface AddHabitModalProps {
   onClose: () => void;
   onAdd: (name: string, icon: string, defaultSubHabits?: SubHabit[], target?: number, unit?: string) => void;
+  habitToEdit?: Habit;
+  onUpdate?: (habit: Habit) => void;
 }
 
-export function AddHabitModal({ onClose, onAdd }: AddHabitModalProps) {
-  const [name, setName] = useState('');
-  const [icon, setIcon] = useState<IconName>('target');
-  const [tab, setTab] = useState<'templates' | 'custom'>('templates');
-  const [target, setTarget] = useState('');
-  const [unit, setUnit] = useState('session');
-  const [isCustomUnit, setIsCustomUnit] = useState(false);
+export function AddHabitModal({ onClose, onAdd, habitToEdit, onUpdate }: AddHabitModalProps) {
+  const isEditing = !!habitToEdit;
+  const [name, setName] = useState(habitToEdit?.name || '');
+  const [icon, setIcon] = useState<IconName>((habitToEdit?.icon as IconName) || 'target');
+  const [tab, setTab] = useState<'templates' | 'custom'>(isEditing ? 'custom' : 'templates');
+  const [target, setTarget] = useState(habitToEdit?.target?.toString() || '');
+  const [unit, setUnit] = useState(habitToEdit?.unit || 'session');
+  const [isCustomUnit, setIsCustomUnit] = useState(!!habitToEdit?.unit && !['session', 'minutes', 'hours', 'pages', 'glasses', 'miles', 'km'].includes(habitToEdit.unit));
 
   const handleSubmit = () => {
     if (!name.trim()) return;
     const parsedTarget = target ? parseFloat(target) : undefined;
-    onAdd(name.trim(), icon, undefined, parsedTarget, parsedTarget ? unit.trim() || 'session' : undefined);
+    const finalUnit = parsedTarget ? unit.trim() || 'session' : undefined;
+    
+    if (isEditing && onUpdate && habitToEdit) {
+      onUpdate({
+        ...habitToEdit,
+        name: name.trim(),
+        icon,
+        target: parsedTarget,
+        unit: finalUnit
+      });
+    } else {
+      onAdd(name.trim(), icon, undefined, parsedTarget, finalUnit);
+    }
     onClose();
   };
 
@@ -87,51 +102,53 @@ export function AddHabitModal({ onClose, onAdd }: AddHabitModalProps) {
         {/* Header */}
         <div className="px-6 pt-6 pb-4">
           <div className="flex items-center justify-between mb-5">
-            <h2 className="font-semibold text-base text-foreground">New Task</h2>
+            <h2 className="font-semibold text-base text-foreground">{isEditing ? 'Edit Task' : 'New Task'}</h2>
             <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-accent transition-colors">
               <X className="w-4 h-4 text-muted-foreground" />
             </button>
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-1 p-1 bg-accent/50 rounded-xl relative z-0">
-            <button
-              onClick={() => setTab('templates')}
-              className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-colors ${
-                tab === 'templates'
-                  ? 'text-background'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-background/10'
-              }`}
-            >
-              {tab === 'templates' && (
-                <motion.div
-                  layoutId="add-modal-tab-indicator"
-                  className="absolute inset-0 bg-foreground rounded-lg shadow-sm -z-10"
-                  transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                />
-              )}
-              <Sparkles className="w-3.5 h-3.5" />
-              Templates
-            </button>
-            <button
-              onClick={() => setTab('custom')}
-              className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-colors ${
-                tab === 'custom'
-                  ? 'text-background'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-background/10'
-              }`}
-            >
-              {tab === 'custom' && (
-                <motion.div
-                  layoutId="add-modal-tab-indicator"
-                  className="absolute inset-0 bg-foreground rounded-lg shadow-sm -z-10"
-                  transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                />
-              )}
-              <PenLine className="w-3.5 h-3.5" />
-              Custom
-            </button>
-          </div>
+          {!isEditing && (
+            <div className="flex gap-1 p-1 bg-accent/50 rounded-xl relative z-0">
+              <button
+                onClick={() => setTab('templates')}
+                className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-colors ${
+                  tab === 'templates'
+                    ? 'text-background'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-background/10'
+                }`}
+              >
+                {tab === 'templates' && (
+                  <motion.div
+                    layoutId="add-modal-tab-indicator"
+                    className="absolute inset-0 bg-foreground rounded-lg shadow-sm -z-10"
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                  />
+                )}
+                <Sparkles className="w-3.5 h-3.5" />
+                Templates
+              </button>
+              <button
+                onClick={() => setTab('custom')}
+                className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-colors ${
+                  tab === 'custom'
+                    ? 'text-background'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-background/10'
+                }`}
+              >
+                {tab === 'custom' && (
+                  <motion.div
+                    layoutId="add-modal-tab-indicator"
+                    className="absolute inset-0 bg-foreground rounded-lg shadow-sm -z-10"
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                  />
+                )}
+                <PenLine className="w-3.5 h-3.5" />
+                Custom
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Content */}
@@ -253,7 +270,7 @@ export function AddHabitModal({ onClose, onAdd }: AddHabitModalProps) {
                 disabled={!name.trim()}
                 className="w-full py-2.5 rounded-xl bg-foreground text-background font-medium text-sm hover:opacity-90 transition-opacity disabled:opacity-30"
               >
-                Add Task
+                {isEditing ? 'Save Changes' : 'Add Task'}
               </button>
             </div>
           )}

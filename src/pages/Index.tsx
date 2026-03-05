@@ -9,9 +9,11 @@ import { auth } from "@/lib/firebase";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { signOut } from "firebase/auth";
 import { toast } from "sonner";
-import { LogOut, Orbit, LayoutList, FileText } from "lucide-react";
+import { LogOut, Orbit, LayoutList, FileText, Download, User } from "lucide-react";
 import { Note, loadNotesCloud, saveNoteCloud, deleteNoteCloud } from "@/lib/noteStore";
 import { NotesPage } from "@/components/NotesPage";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -30,6 +32,30 @@ const Index = () => {
   const [notes, setNotes] = useState<Note[]>([]);
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') === 'notes' ? 'notes' : 'tasks';
+  const [deferredPrompt, setDeferredPrompt] = useState<any>((window as any).deferredPrompt || null);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      (window as any).deferredPrompt = e;
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    if ((window as any).deferredPrompt) {
+      setDeferredPrompt((window as any).deferredPrompt);
+    }
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setDeferredPrompt(null);
+      }
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -111,16 +137,46 @@ const Index = () => {
               <h1 className="font-semibold text-sm text-foreground tracking-tight">Dott</h1>
             </div>
           </div>
-          <button
-            onClick={() => {
-              signOut(auth);
-              toast.success("Signed out successfully");
-            }}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border/40 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors text-xs font-medium"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            Sign Out
-          </button>
+          <div className="flex items-center gap-4">
+            {user && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex items-center justify-center rounded-full hover:ring-2 hover:ring-border/80 transition-all focus:outline-none focus:ring-2 focus:ring-ring">
+                    <Avatar className="w-8 h-8 rounded-full border border-border/50 shadow-sm">
+                      <AvatarImage src={user.photoURL || undefined} alt={user.displayName || 'User'} />
+                      <AvatarFallback className="bg-accent text-xs">
+                        {user.displayName ? user.displayName.charAt(0).toUpperCase() : <User className="w-4 h-4 text-muted-foreground" />}
+                      </AvatarFallback>
+                    </Avatar>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48 glass-card border-border/40 p-1 rounded-xl shadow-xl">
+                  {deferredPrompt && (
+                    <>
+                      <DropdownMenuItem 
+                        onClick={handleInstallClick}
+                        className="flex items-center gap-2 cursor-pointer text-sm font-medium focus:bg-accent focus:text-accent-foreground rounded-lg py-1.5 px-2.5"
+                      >
+                        <Download className="w-4 h-4 ml-0.5 text-muted-foreground" />
+                        Download App
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator className="bg-border/40 my-1 mx-1" />
+                    </>
+                  )}
+                  <DropdownMenuItem 
+                    onClick={() => {
+                      signOut(auth);
+                      toast.success("Signed out successfully");
+                    }}
+                    className="flex items-center gap-2 cursor-pointer text-sm font-medium focus:bg-destructive/10 focus:text-destructive text-destructive rounded-lg py-1.5 px-2.5"
+                  >
+                    <LogOut className="w-4 h-4 ml-0.5" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
         </div>
       </motion.header>
 
