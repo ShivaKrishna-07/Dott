@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { MonthPicker } from "@/components/MonthPicker";
 import { HabitGrid } from "@/components/HabitGrid";
 import { ContributionHeatmap } from "@/components/ContributionHeatmap";
-import { Habit, loadHabits, loadHabitsCloud, saveHabitsCloud, formatDateKey, getEntry } from "@/lib/habitStore";
+import { Habit, loadHabitsCloud, saveHabitsCloud, formatDateKey, getEntry } from "@/lib/habitStore";
 import { auth } from "@/lib/firebase";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { signOut } from "firebase/auth";
@@ -62,14 +62,6 @@ const Index = () => {
 
     const initializeData = async () => {
       let cloudHabits = await loadHabitsCloud(user.uid);
-      const localHabits = loadHabits();
-
-      // Migrate local to cloud if cloud is empty and local has data
-      if (cloudHabits.length === 0 && localHabits.length > 0) {
-        toast.info("Syncing your local habits to the cloud...");
-        await saveHabitsCloud(user.uid, localHabits);
-        cloudHabits = localHabits;
-      }
 
       setHabits(cloudHabits);
       
@@ -131,10 +123,10 @@ const Index = () => {
         className="sticky top-0 z-30 bg-background/60 backdrop-blur-xl border-b border-border/50"
       >
         <div className="max-w-[1600px] mx-auto px-3 sm:px-6 py-3 sm:py-3.5 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <img src="/dott.jpg" alt="Dott Logo" className="w-7 h-7 rounded-lg object-cover" />
+          <div className="flex items-center gap-3">
+            <img src="/dott.jpg" alt="Dott Logo" className="w-10 h-10 rounded-xl object-cover shadow-sm" />
             <div>
-              <h1 className="font-semibold text-sm text-foreground tracking-tight">Dott</h1>
+              <h1 className="font-semibold text-lg text-foreground tracking-tight">Dott</h1>
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -225,7 +217,7 @@ const Index = () => {
 
           {/* Month Picker - only show on Tasks tab */}
           {activeTab === 'tasks' && (
-            <div className="flex justify-end w-full sm:w-auto">
+            <div className="flex justify-center sm:justify-end w-full sm:w-auto mt-2 sm:mt-0">
               <MonthPicker year={year} month={month} onChange={(y, m) => { setYear(y); setMonth(m); }} />
             </div>
           )}

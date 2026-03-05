@@ -32,7 +32,6 @@ export interface Habit {
   defaultSubHabits?: SubHabit[];
 }
 
-const STORAGE_KEY = 'habit-tracker-data';
 
 const COLORS = [
   '155 70% 40%', '220 70% 55%', '280 65% 55%', '38 92% 50%',
@@ -43,18 +42,6 @@ export function getRandomColor(): string {
   return COLORS[Math.floor(Math.random() * COLORS.length)];
 }
 
-export function loadHabits(): Habit[] {
-  try {
-    const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
-  } catch {
-    return [];
-  }
-}
-
-export function saveHabits(habits: Habit[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(habits));
-}
 
 export async function loadHabitsCloud(userId: string): Promise<Habit[]> {
   try {
